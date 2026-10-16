@@ -1,0 +1,6 @@
+{
+  "name": "Sistema Sentinela - Contenção Financeira Radical",
+  "description": "Sistema de contenção financeira baseado em Economia Comportamental (Nudge Theory), Teto Móvel de Burn Rate diário, Gestão de Passivos e Interface de Fricção para usuários com alta impulsividade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
