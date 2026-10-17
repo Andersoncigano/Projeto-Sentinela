@@ -36,6 +36,22 @@ export interface SystemSettings {
   horas_trabalho_mes: number;
   custos_fixos_essenciais: number;
   meta_poupanca_minima: number;
+  dia_recebimento?: number; // Dia 5
+  rescisao_prevista?: {
+    data_prevista: string; // ex: '2026-10-30'
+    valor?: number;
+    status: 'aguardando_calculo' | 'recebido';
+    observacao?: string;
+  };
+}
+
+export interface MonthScaleSummary {
+  mes: string; // YYYY-MM
+  total_vista: number; // Pix + Dinheiro + Débito
+  total_cartao: number; // Cartão de Crédito
+  total_geral: number;
+  qtd_vista: number;
+  qtd_cartao: number;
 }
 
 export interface ParsedTokens {

@@ -103,6 +103,14 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-neutral-700">|</span>
           <span className="text-neutral-400">HOST: 127.0.0.1</span>
           <span className="text-neutral-700">|</span>
+          <span className="text-[#00ff66]">
+            SALÁRIO: DIA 05
+          </span>
+          <span className="text-neutral-700">|</span>
+          <span className="text-[#00f0ff]">
+            RESCISÃO: PREV. DIA 30
+          </span>
+          <span className="text-neutral-700">|</span>
           <span className="text-[#ffe600]">
             LABOR_CONVERSION: {formatCurrency(valorHora, isHidden)}/HR (88H PCD)
           </span>

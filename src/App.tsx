@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { MetricCards } from './components/MetricCards';
 import { RawInputTerminal } from './components/RawInputTerminal';
@@ -14,6 +14,9 @@ import { AuditTable } from './components/AuditTable';
 import { SimulatorTab } from './components/SimulatorTab';
 import { PythonCodeViewer } from './components/PythonCodeViewer';
 import { NudgeManualTab } from './components/NudgeManualTab';
+import { MonthSelector } from './components/MonthSelector';
+import { DualScaleTracker } from './components/DualScaleTracker';
+import { NoteBatchImporterModal } from './components/NoteBatchImporterModal';
 
 import {
   ExpenseRecord,
@@ -27,63 +30,37 @@ import { formatCurrency } from './lib/format';
 
 export { formatCurrency };
 
+import { RotateCcw, Trash2 } from 'lucide-react';
+
 const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
   reserva_emergencia: 1400.0,
   horas_trabalho_mes: 88.0, // PCD Meio Período (~4h/dia * 22 dias)
   custos_fixos_essenciais: 250.0,
   meta_poupanca_minima: 50.0,
+  dia_recebimento: 5,
+  rescisao_prevista: {
+    data_prevista: '2026-10-30',
+    status: 'aguardando_calculo',
+    observacao: 'Previsão de rescisão a receber no dia 30 - verificar valor homologado',
+  },
 };
 
 const DEFAULT_DEBTS: DebtRecord[] = [
   {
     id: 'debt_cartao_1',
     credor: 'Fatura do Cartão de Crédito',
-    valor_total: 320.0,
-    valor_pago: 120.0,
-    meta_amortizacao_mes: 100.0,
+    valor_total: 0.0,
+    valor_pago: 0.0,
+    meta_amortizacao_mes: 0.0,
     prioridade: 1,
-    observacao: 'Pagamento mensal planejado da fatura',
+    observacao: 'Fatura do cartão de crédito zerada para novo ciclo',
   },
 ];
 
 const getInitialExpenses = (): ExpenseRecord[] => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-
-  return [
-    {
-      id: 'seed_1',
-      data: `${y}-${m}-02`,
-      descricao: 'Farmácia - Remédio de uso contínuo',
-      valor: 35.0,
-      metodo_pagamento: 'pix',
-      categoria: 'saude',
-      is_impulsive: false,
-      timestamp: Date.now() - 86400000 * 5,
-    },
-    {
-      id: 'seed_2',
-      data: `${y}-${m}-04`,
-      descricao: 'Passagem Ônibus / Vale Transporte',
-      valor: 22.0,
-      metodo_pagamento: 'dinheiro',
-      categoria: 'transporte',
-      is_impulsive: false,
-      timestamp: Date.now() - 86400000 * 4,
-    },
-    {
-      id: 'seed_3',
-      data: `${y}-${m}-07`,
-      descricao: 'Lanche iFood Delivery Combo',
-      valor: 45.0,
-      metodo_pagamento: 'pix',
-      categoria: 'alimentacao_impulsiva',
-      is_impulsive: true,
-      timestamp: Date.now() - 86400000 * 2,
-    },
-  ];
+  // Inicialização zerada a pedido do usuário para recomeçar do zero
+  return [];
 };
 
 export default function App() {
@@ -98,8 +75,14 @@ export default function App() {
   });
 
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
-    const saved = localStorage.getItem('sentinela_expenses');
+    const saved = localStorage.getItem('sentinela_expenses_v2');
     return saved ? JSON.parse(saved) : getInitialExpenses();
+  });
+
+  // Mês selecionado no banco de dados (ex: '2026-10' ou '2026-09')
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const saved = localStorage.getItem('sentinela_selected_month');
+    return saved || '2026-10';
   });
 
   const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual'>('cockpit');
@@ -115,6 +98,7 @@ export default function App() {
   const [pendingFrictionExpense, setPendingFrictionExpense] = useState<ExpenseRecord | null>(null);
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isNoteImporterOpen, setIsNoteImporterOpen] = useState(false);
 
   // Salvar preferências no localStorage
   useEffect(() => {
@@ -126,12 +110,16 @@ export default function App() {
   }, [debts]);
 
   useEffect(() => {
-    localStorage.setItem('sentinela_expenses', JSON.stringify(expenses));
+    localStorage.setItem('sentinela_expenses_v2', JSON.stringify(expenses));
   }, [expenses]);
 
   useEffect(() => {
     localStorage.setItem('sentinela_show_values', JSON.stringify(showValues));
   }, [showValues]);
+
+  useEffect(() => {
+    localStorage.setItem('sentinela_selected_month', selectedMonth);
+  }, [selectedMonth]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -151,17 +139,40 @@ export default function App() {
     });
   };
 
-  // Compute Moving Ceiling & Daily Burn Rate
-  const metrics: BurnRateMetrics = SentinelaBurnEngine.calculateMetrics(
-    settings,
-    expenses,
-    debts
-  );
+  // Meses disponíveis no banco de dados
+  const availableMonths = useMemo(() => {
+    const monthSet = new Set<string>(['2026-09', '2026-10']);
+    expenses.forEach((e) => {
+      if (e.data && e.data.length >= 7) {
+        monthSet.add(e.data.substring(0, 7));
+      }
+    });
+    return Array.from(monthSet).sort().reverse();
+  }, [expenses]);
+
+  // Compute Moving Ceiling & Daily Burn Rate para o mês selecionado
+  const metrics: BurnRateMetrics = useMemo(() => {
+    const [selYear, selMonth] = selectedMonth.split('-').map(Number);
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const isCurrentMonth = selectedMonth === currentMonthKey;
+
+    const refDate = isCurrentMonth
+      ? now
+      : new Date(selYear, selMonth - 1, new Date(selYear, selMonth, 0).getDate());
+
+    return SentinelaBurnEngine.calculateMetrics(
+      settings,
+      expenses,
+      debts,
+      refDate
+    );
+  }, [settings, expenses, debts, selectedMonth]);
 
   const handleRegisterExpense = (record: ExpenseRecord) => {
     setExpenses((prev) => [record, ...prev]);
     setTerminalInput(''); // Limpa o terminal após registro com sucesso
-    showToast(`✓ [LOG_OK] Gasto registrado: R$ ${record.valor.toFixed(2)} (${record.descricao}).`);
+    showToast(`✓ [BANCO_DADOS] Gasto registrado: R$ ${record.valor.toFixed(2)} (${record.descricao}).`);
   };
 
   const handleFrictionCheck = (record: ExpenseRecord) => {
@@ -185,7 +196,7 @@ export default function App() {
 
   const handleDeleteExpense = (id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
-    showToast('✓ [RESTORE] Despesa eliminada. Teto Móvel Diário restaurado.');
+    showToast('✓ [BANCO_DADOS] Despesa eliminada. Teto Móvel Diário recalculado.');
   };
 
   const handleAmortizeDebt = (debtId: string, amount: number) => {
@@ -212,9 +223,74 @@ export default function App() {
     showToast(`🚨 [ICE_BREACH] Violação do cofre registrada: R$ ${amount.toFixed(2)}`);
   };
 
+  // Importar despesas em lote do bloco de notas
+  const handleImportBatchExpenses = (newExpenses: ExpenseRecord[], targetMonth: string) => {
+    setExpenses((prev) => [...newExpenses, ...prev]);
+    setSelectedMonth(targetMonth);
+    showToast(`✓ [BANCO_DADOS] ${newExpenses.length} despesas gravadas no mês ${targetMonth}!`);
+  };
+
+  // Restaurar backup do banco de dados
+  const handleRestoreDatabase = (backup: { expenses: ExpenseRecord[]; debts?: DebtRecord[]; settings?: SystemSettings }) => {
+    if (backup.expenses && Array.isArray(backup.expenses)) {
+      setExpenses(backup.expenses);
+    }
+    if (backup.debts && Array.isArray(backup.debts)) {
+      setDebts(backup.debts);
+    }
+    if (backup.settings) {
+      setSettings(backup.settings);
+    }
+    showToast('✓ [BANCO_DADOS] Backup restaurado com sucesso!');
+  };
+
+  // Atualizar valor da rescisão quando o usuário receber no dia 30
+  const handleUpdateRescisao = (valor: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      rescisao_prevista: {
+        data_prevista: '2026-10-30',
+        valor,
+        status: 'recebido',
+        observacao: 'Verba rescisória informada pelo usuário',
+      },
+    }));
+    showToast(`✓ [RESCISAO_GRAVADA] Valor de R$ ${valor.toFixed(2)} registrado no sistema!`);
+  };
+
+  // Limpar todos os valores anteriores para recomeçar o banco de dados do zero
+  const handleClearAllExpenses = () => {
+    sound.playSuccess();
+    setExpenses([]);
+    setDebts([
+      {
+        id: 'debt_cartao_1',
+        credor: 'Fatura do Cartão de Crédito',
+        valor_total: 0.0,
+        valor_pago: 0.0,
+        meta_amortizacao_mes: 0.0,
+        prioridade: 1,
+        observacao: 'Fatura do cartão de crédito zerada para novo ciclo',
+      },
+    ]);
+    localStorage.setItem('sentinela_expenses_v2', JSON.stringify([]));
+    localStorage.setItem('sentinela_debts', JSON.stringify([
+      {
+        id: 'debt_cartao_1',
+        credor: 'Fatura do Cartão de Crédito',
+        valor_total: 0.0,
+        valor_pago: 0.0,
+        meta_amortizacao_mes: 0.0,
+        prioridade: 1,
+        observacao: 'Fatura do cartão de crédito zerada para novo ciclo',
+      },
+    ]));
+    showToast('🧹 [BANCO_DADOS_ZERADO] Histórico e faturas anteriores zerados com sucesso! Pronto para novo ciclo.');
+  };
+
   return (
     <div className="min-h-screen bg-[#030407] text-[#e0f2fe] flex flex-col font-mono selection:bg-[#00f0ff] selection:text-black relative">
-      {/* CRT Scanline & Curved Vignette Overlays (Matches reference image terminal) */}
+      {/* CRT Scanline & Curved Vignette Overlays */}
       {crtEnabled && (
         <>
           <div className="crt-overlay fixed inset-0 z-40 opacity-70 pointer-events-none" />
@@ -222,7 +298,7 @@ export default function App() {
         </>
       )}
 
-      {/* Top Cyberpunk Header com Botão MOSTRAR RENDA / OCULTAR RENDA */}
+      {/* Top Cyberpunk Header */}
       <Header
         metrics={metrics}
         settings={settings}
@@ -237,7 +313,7 @@ export default function App() {
       />
 
       {/* Main Cockpit Space */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-5 relative z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4 relative z-10">
         {/* Cyber Toast Notification */}
         {toastMessage && (
           <div className="fixed bottom-5 right-5 z-50 bg-black border border-[#00f0ff] text-[#00f0ff] px-4 py-2.5 text-xs flex items-center gap-2 neon-glow-cyan animate-in slide-in-from-bottom duration-150">
@@ -249,6 +325,49 @@ export default function App() {
         {/* TAB 1: COCKPIT OPERACIONAL */}
         {activeTab === 'cockpit' && (
           <div className="space-y-4 animate-in fade-in duration-150">
+            {/* Seletor Mês a Mês do Banco de Dados & Backup */}
+            <MonthSelector
+              selectedMonth={selectedMonth}
+              onSelectMonth={setSelectedMonth}
+              availableMonths={availableMonths}
+              expenses={expenses}
+              debts={debts}
+              settings={settings}
+              showValues={showValues}
+              onRestoreDatabase={handleRestoreDatabase}
+              onClearAllData={handleClearAllExpenses}
+            />
+
+            {/* Banner de Limpeza se houver despesas no navegador do usuário */}
+            {expenses.length > 0 && (
+              <div className="bg-[#14060b] border border-[#ff0055]/70 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+                <div className="flex items-center gap-2 text-[#ff4d79]">
+                  <RotateCcw className="w-4 h-4 text-[#ff0055] flex-shrink-0" />
+                  <span>
+                    Existem <strong>{expenses.length} lançamentos</strong> salvos no navegador. Clique ao lado para zerar tudo e começar do zero:
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearAllExpenses}
+                  className="px-3.5 py-1.5 bg-[#ff0055] hover:bg-[#ff3377] text-white font-extrabold uppercase text-[11px] transition-all cursor-pointer flex-shrink-0 flex items-center gap-1.5 shadow-lg shadow-[#ff0055]/30"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>ZERAR HISTÓRICO AGORA</span>
+                </button>
+              </div>
+            )}
+
+            {/* Mecanismo de Duas Escalas: Pix/À Vista vs Cartão de Crédito + Ciclo Salário (Dia 5) & Rescisão (Dia 30) */}
+            <DualScaleTracker
+              selectedMonth={selectedMonth}
+              expenses={expenses}
+              settings={settings}
+              showValues={showValues}
+              onOpenNoteImporter={() => setIsNoteImporterOpen(true)}
+              onUpdateRescisao={handleUpdateRescisao}
+            />
+
             {/* Top Metric Cards: Renda, Teto Móvel Diário, Saldo Livre */}
             <MetricCards 
               metrics={metrics} 
@@ -286,10 +405,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* Audit & Transaction Ledger */}
+            {/* Audit & Transaction Ledger com filtro por mês selecionado */}
             <AuditTable
               expenses={expenses}
               onDeleteExpense={handleDeleteExpense}
+              selectedMonth={selectedMonth}
             />
           </div>
         )}
@@ -316,7 +436,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Behavioral Friction Modal (Cooling-off & Labor Loss conversion) */}
+      {/* Behavioral Friction Modal */}
       <FrictionModal
         expense={pendingFrictionExpense}
         metrics={metrics}
@@ -325,11 +445,19 @@ export default function App() {
         onConfirm={handleConfirmFriction}
       />
 
+      {/* Modal de Importação em Lote do Bloco de Notas */}
+      <NoteBatchImporterModal
+        isOpen={isNoteImporterOpen}
+        onClose={() => setIsNoteImporterOpen(false)}
+        onImportExpenses={handleImportBatchExpenses}
+        currentSelectedMonth={selectedMonth}
+      />
+
       {/* Footer */}
       <footer className="border-t border-[#141b2e] bg-[#020306] py-3 text-center text-[10px] text-neutral-500 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span className="text-[#00f0ff]/70">// SISTEMA SENTINELA :: CYBERPUNK HUD EDITION</span>
-          <span className="text-neutral-600">NUDGE THEORY • MOVING CEILING • PRIVACY MODE (SHOW_VALUES: {showValues ? 'ON' : 'OFF'})</span>
+          <span className="text-[#00f0ff]/70">// SISTEMA SENTINELA :: BANCO DE DADOS MÊS A MÊS & DUAS ESCALAS</span>
+          <span className="text-neutral-600">SALÁRIO DIA 05 • RESCISÃO PREV. DIA 30 • MÊS ATIVO: {selectedMonth}</span>
         </div>
       </footer>
     </div>

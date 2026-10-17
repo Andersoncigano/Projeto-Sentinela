@@ -6,16 +6,23 @@ import { sound } from '../lib/sound';
 interface AuditTableProps {
   expenses: ExpenseRecord[];
   onDeleteExpense: (id: string) => void;
+  selectedMonth?: string;
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({
   expenses,
   onDeleteExpense,
+  selectedMonth,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao' | 'essential'>('all');
+  const [filterMonthOnly, setFilterMonthOnly] = useState<boolean>(true);
 
   const filtered = expenses.filter((e) => {
+    if (selectedMonth && filterMonthOnly && !e.data.startsWith(selectedMonth)) {
+      return false;
+    }
+
     const isCartao = e.metodo_pagamento === 'cartao_credito' || 
                      e.metodo_pagamento === 'cartao_proprio' || 
                      e.metodo_pagamento === 'cartao_mae';
@@ -100,6 +107,21 @@ export const AuditTable: React.FC<AuditTableProps> = ({
             >
               CARTÃO CRÉDITO
             </button>
+
+            {selectedMonth && (
+              <button
+                type="button"
+                onClick={() => setFilterMonthOnly(!filterMonthOnly)}
+                className={`px-2 py-0.5 border text-[10px] uppercase font-bold cursor-pointer transition-all ${
+                  filterMonthOnly
+                    ? 'border-[#ffe600] bg-[#ffe600]/10 text-[#ffe600]'
+                    : 'border-neutral-700 bg-neutral-900 text-neutral-400'
+                }`}
+                title="Alternar entre ver somente o mês ativo ou todo o histórico"
+              >
+                {filterMonthOnly ? `MÊS ATIVO (${selectedMonth})` : 'TODOS OS MESES'}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -108,17 +108,54 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
         </div>
       </div>
 
+      {/* Painel de Direção Visual: Gastos de Hoje no Cartão */}
+      <div className="bg-[#02131d] border-2 border-[#00f0ff] p-3 mb-3 text-xs shadow-lg shadow-[#00f0ff]/10 animate-in fade-in">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#00f0ff] animate-ping" />
+              <span className="text-[#00f0ff] font-extrabold uppercase text-xs tracking-wider">
+                🎯 ONDE INSERIR SEUS GASTOS DE HOJE NO CARTÃO:
+              </span>
+            </div>
+            <p className="text-neutral-300 text-[11px] mt-1">
+              Digite no campo <strong className="text-[#00f0ff]">sentinela@deck:~$</strong> logo abaixo e aperte <strong className="text-[#ffe600]">ENTER</strong>, ou clique direto nos atalhos:
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('uber 16.00 cartao')}
+              className="px-3 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              title="Preenche e prepara o gasto do Uber R$ 16 no cartão"
+            >
+              <span>🚗 1º UBER: R$ 16,00 (CARTÃO)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('chopp 22.00 cartao')}
+              className="px-3 py-1.5 bg-black border-2 border-[#ffe600] text-[#ffe600] hover:bg-[#ffe600] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              title="Preenche e prepara o gasto do Chopp R$ 22 no cartão (com fricção comportamental)"
+            >
+              <span>🍺 2º CHOPP: R$ 22,00 (CARTÃO)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Cyber Hotkeys Row */}
-      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 text-xs">
+      <div className="flex items-center gap-1.5 mb-2.5 overflow-x-auto pb-1 text-xs">
         <span className="text-neutral-500 text-[10px] font-bold uppercase flex items-center gap-1 flex-shrink-0">
-          <Command className="w-3 h-3 text-[#ffe600]" /> TEST DRIVE:
+          <Command className="w-3 h-3 text-[#ffe600]" /> OUTROS ATALHOS:
         </span>
         {PRESET_COMMANDS.map((preset) => (
           <button
             key={preset.key}
             type="button"
             onClick={() => handleSelectPreset(preset.cmd)}
-            className={`px-2 py-1 text-[11px] border font-mono transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`px-2 py-0.5 text-[10px] border font-mono transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
               preset.type === 'danger'
                 ? 'bg-[#180309] border-[#ff0055] text-[#ff3377] hover:bg-[#ff0055] hover:text-black'
                 : preset.type === 'impulse'
@@ -126,7 +163,7 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                 : 'bg-[#021308] border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black'
             }`}
           >
-            <span className="px-1 py-0.2 bg-black text-neutral-300 font-bold text-[9px] border border-neutral-700">
+            <span className="px-1 py-0.2 bg-black text-neutral-300 font-bold text-[8px] border border-neutral-700">
               {preset.key}
             </span>
             <span>{preset.label}</span>
@@ -136,7 +173,7 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
 
       {/* Terminal Input Prompt */}
       <form onSubmit={handleSubmit} className="relative">
-        <div className="relative flex items-center bg-black border border-[#00f0ff] p-1 neon-glow-cyan gap-1">
+        <div className="relative flex items-center bg-black border-2 border-[#00f0ff] p-1.5 neon-glow-cyan gap-1.5">
           <span className="pl-3 pr-2 text-[#00f0ff] font-bold text-xs select-none flex-shrink-0">
             sentinela@deck:~$
           </span>
@@ -151,8 +188,8 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                 handleClear();
               }
             }}
-            placeholder="Digite: 'uber 16 cartao', 'chopp 22 cartao' ou 'lanche 45 pix'..."
-            className="w-full bg-transparent text-[#e0f2fe] placeholder:text-neutral-600 focus:outline-none text-xs font-mono py-2"
+            placeholder="Digite: 'uber 16 cartao' ou 'chopp 22 cartao' e aperte ENTER..."
+            className="w-full bg-transparent text-[#e0f2fe] placeholder:text-neutral-500 focus:outline-none text-xs font-mono py-1.5"
           />
 
           {/* Inline Clear Button when input is not empty */}
