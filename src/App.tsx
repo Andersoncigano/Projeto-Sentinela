@@ -23,6 +23,9 @@ import {
 } from './types/sentinela';
 import { SentinelaBurnEngine } from './lib/burnEngine';
 import { sound } from './lib/sound';
+import { formatCurrency } from './lib/format';
+
+export { formatCurrency };
 
 const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
@@ -34,13 +37,13 @@ const DEFAULT_SETTINGS: SystemSettings = {
 
 const DEFAULT_DEBTS: DebtRecord[] = [
   {
-    id: 'debt_mae_1',
-    credor: 'Mãe (Fatura do Cartão Emprestado)',
+    id: 'debt_cartao_1',
+    credor: 'Fatura do Cartão de Crédito',
     valor_total: 320.0,
     valor_pago: 120.0,
     meta_amortizacao_mes: 100.0,
     prioridade: 1,
-    observacao: 'Compromisso de honra familiar compulsório',
+    observacao: 'Pagamento mensal planejado da fatura',
   },
 ];
 
@@ -102,14 +105,18 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual'>('cockpit');
   const [isMuted, setIsMuted] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
-  const [hideIncome, setHideIncome] = useState<boolean>(() => {
-    const saved = localStorage.getItem('sentinela_hide_income');
-    return saved ? JSON.parse(saved) : false;
+
+  // Estado global de visibilidade/privacidade (Modo Ocultar Valores como em apps de banco)
+  const [showValues, setShowValues] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sentinela_show_values');
+    return saved !== null ? JSON.parse(saved) : true;
   });
+
   const [pendingFrictionExpense, setPendingFrictionExpense] = useState<ExpenseRecord | null>(null);
+  const [terminalInput, setTerminalInput] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Save to localStorage
+  // Salvar preferências no localStorage
   useEffect(() => {
     localStorage.setItem('sentinela_settings', JSON.stringify(settings));
   }, [settings]);
@@ -123,12 +130,25 @@ export default function App() {
   }, [expenses]);
 
   useEffect(() => {
-    localStorage.setItem('sentinela_hide_income', JSON.stringify(hideIncome));
-  }, [hideIncome]);
+    localStorage.setItem('sentinela_show_values', JSON.stringify(showValues));
+  }, [showValues]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Alterna o estado global de visibilidade de valores
+  const handleToggleShowValues = () => {
+    setShowValues((prev) => {
+      const next = !prev;
+      showToast(
+        next
+          ? '👁️ [MODO_PRIVACIDADE_DESATIVADO] Valores visíveis.'
+          : '👁️ [MODO_PRIVACIDADE_ATIVADO] Renda e todos os valores sensíveis ocultos.'
+      );
+      return next;
+    });
   };
 
   // Compute Moving Ceiling & Daily Burn Rate
@@ -140,6 +160,7 @@ export default function App() {
 
   const handleRegisterExpense = (record: ExpenseRecord) => {
     setExpenses((prev) => [record, ...prev]);
+    setTerminalInput(''); // Limpa o terminal após registro com sucesso
     showToast(`✓ [LOG_OK] Gasto registrado: R$ ${record.valor.toFixed(2)} (${record.descricao}).`);
   };
 
@@ -150,13 +171,15 @@ export default function App() {
   const handleAbortFriction = () => {
     sound.playSuccess();
     setPendingFrictionExpense(null);
-    showToast('🛡️ [DEFESA_ATIVA] Compra abortada! Soberania e teto diário preservados.');
+    setTerminalInput(''); // Limpa o terminal ao voltar / cancelar a tela de fricção
+    showToast('🛡️ [VOLTAR_OK] Operação cancelada e terminal limpo! Teto diário preservado.');
   };
 
   const handleConfirmFriction = (record: ExpenseRecord) => {
     sound.playFrictionAlert();
     setExpenses((prev) => [record, ...prev]);
     setPendingFrictionExpense(null);
+    setTerminalInput(''); // Limpa o terminal após confirmar sob penalidade
     showToast(`⚠️ [OVERRIDE] Gasto impulsivo de R$ ${record.valor.toFixed(2)} computado sob penalidade.`);
   };
 
@@ -169,7 +192,7 @@ export default function App() {
     setDebts((prev) =>
       prev.map((d) => (d.id === debtId ? { ...d, valor_pago: d.valor_pago + amount } : d))
     );
-    showToast(`✓ [ESCROW_AMORT] Amortização de R$ ${amount.toFixed(2)} à Mãe quitada!`);
+    showToast(`✓ [FATURA_AMORT] Pagamento de R$ ${amount.toFixed(2)} da Fatura do Cartão quitado!`);
   };
 
   const handleAddDebt = (newDebt: Omit<DebtRecord, 'id'>) => {
@@ -189,11 +212,6 @@ export default function App() {
     showToast(`🚨 [ICE_BREACH] Violação do cofre registrada: R$ ${amount.toFixed(2)}`);
   };
 
-  const handleToggleHideIncome = (val: boolean) => {
-    setHideIncome(val);
-    showToast(val ? '👁️ [MODO_PRIVACIDADE_ATIVADO] Renda e valores ocultos.' : '👁️ [MODO_PRIVACIDADE_DESATIVADO] Valores visíveis.');
-  };
-
   return (
     <div className="min-h-screen bg-[#030407] text-[#e0f2fe] flex flex-col font-mono selection:bg-[#00f0ff] selection:text-black relative">
       {/* CRT Scanline & Curved Vignette Overlays (Matches reference image terminal) */}
@@ -204,7 +222,7 @@ export default function App() {
         </>
       )}
 
-      {/* Top Cyberpunk Header */}
+      {/* Top Cyberpunk Header com Botão MOSTRAR RENDA / OCULTAR RENDA */}
       <Header
         metrics={metrics}
         settings={settings}
@@ -214,8 +232,8 @@ export default function App() {
         setIsMuted={setIsMuted}
         crtEnabled={crtEnabled}
         setCrtEnabled={setCrtEnabled}
-        hideIncome={hideIncome}
-        setHideIncome={handleToggleHideIncome}
+        showValues={showValues}
+        onToggleShowValues={handleToggleShowValues}
       />
 
       {/* Main Cockpit Space */}
@@ -231,16 +249,18 @@ export default function App() {
         {/* TAB 1: COCKPIT OPERACIONAL */}
         {activeTab === 'cockpit' && (
           <div className="space-y-4 animate-in fade-in duration-150">
-            {/* Top Metric Cards */}
+            {/* Top Metric Cards: Renda, Teto Móvel Diário, Saldo Livre */}
             <MetricCards 
               metrics={metrics} 
               settings={settings} 
               debts={debts} 
-              hideIncome={hideIncome} 
+              showValues={showValues} 
             />
 
-            {/* Raw Input Terminal (NLP / Regex Parser) */}
+            {/* Raw Input Terminal (NLP / Regex Parser) com suporte a CLEAR e RESET */}
             <RawInputTerminal
+              inputVal={terminalInput}
+              setInputVal={setTerminalInput}
               onRegisterExpense={handleRegisterExpense}
               onRequestFrictionCheck={handleFrictionCheck}
             />
@@ -253,12 +273,15 @@ export default function App() {
                   metrics={metrics}
                   onAmortize={handleAmortizeDebt}
                   onAddDebt={handleAddDebt}
+                  showValues={showValues}
                 />
               </div>
               <div className="lg:col-span-5">
+                {/* Cofre de Emergência com suporte ao modo de privacidade showValues */}
                 <EmergencyVault
                   balance={settings.reserva_emergencia}
                   onEmergencyWithdrawal={handleEmergencyWithdrawal}
+                  showValues={showValues}
                 />
               </div>
             </div>
@@ -306,7 +329,7 @@ export default function App() {
       <footer className="border-t border-[#141b2e] bg-[#020306] py-3 text-center text-[10px] text-neutral-500 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="text-[#00f0ff]/70">// SISTEMA SENTINELA :: CYBERPUNK HUD EDITION</span>
-          <span className="text-neutral-600">NUDGE THEORY • MOVING CEILING • PRIVACY MODE SUPPORTED</span>
+          <span className="text-neutral-600">NUDGE THEORY • MOVING CEILING • PRIVACY MODE (SHOW_VALUES: {showValues ? 'ON' : 'OFF'})</span>
         </div>
       </footer>
     </div>

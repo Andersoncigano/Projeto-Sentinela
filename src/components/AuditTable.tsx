@@ -13,9 +13,13 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   onDeleteExpense,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao_mae' | 'essential'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao' | 'essential'>('all');
 
   const filtered = expenses.filter((e) => {
+    const isCartao = e.metodo_pagamento === 'cartao_credito' || 
+                     e.metodo_pagamento === 'cartao_proprio' || 
+                     e.metodo_pagamento === 'cartao_mae';
+
     const matchesSearch =
       e.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
       e.metodo_pagamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -24,7 +28,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
     if (!matchesSearch) return false;
 
     if (filterType === 'impulsive') return e.is_impulsive;
-    if (filterType === 'cartao_mae') return e.metodo_pagamento === 'cartao_mae';
+    if (filterType === 'cartao') return isCartao;
     if (filterType === 'essential') return !e.is_impulsive;
     return true;
   });
@@ -51,14 +55,24 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               placeholder="BUSCAR_LOGS..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-black border border-neutral-700 pl-8 pr-2 py-1 text-xs text-[#e0f2fe] placeholder:text-neutral-600 focus:outline-none focus:border-[#00f0ff]"
+              className="w-full bg-black border border-neutral-700 pl-8 pr-7 py-1 text-xs text-[#e0f2fe] placeholder:text-neutral-600 focus:outline-none focus:border-[#00f0ff]"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-2 text-neutral-400 hover:text-white text-xs cursor-pointer"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-1 text-[11px]">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-2 py-0.5 border ${
+              className={`px-2 py-0.5 border cursor-pointer ${
                 filterType === 'all'
                   ? 'bg-[#00f0ff] border-[#00f0ff] text-black font-bold'
                   : 'bg-black border-neutral-800 text-neutral-400 hover:text-white'
@@ -68,7 +82,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
             </button>
             <button
               onClick={() => setFilterType('impulsive')}
-              className={`px-2 py-0.5 border ${
+              className={`px-2 py-0.5 border cursor-pointer ${
                 filterType === 'impulsive'
                   ? 'bg-[#ff0055] border-[#ff0055] text-black font-bold'
                   : 'bg-black border-neutral-800 text-[#ff0055] hover:bg-[#ff0055]/10'
@@ -77,14 +91,14 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               IMPULSIVOS
             </button>
             <button
-              onClick={() => setFilterType('cartao_mae')}
-              className={`px-2 py-0.5 border ${
-                filterType === 'cartao_mae'
-                  ? 'bg-[#ffe600] border-[#ffe600] text-black font-bold'
-                  : 'bg-black border-neutral-800 text-[#ffe600] hover:bg-[#ffe600]/10'
+              onClick={() => setFilterType('cartao')}
+              className={`px-2 py-0.5 border cursor-pointer ${
+                filterType === 'cartao'
+                  ? 'bg-[#00f0ff] border-[#00f0ff] text-black font-bold'
+                  : 'bg-black border-neutral-800 text-[#00f0ff] hover:bg-[#00f0ff]/10'
               }`}
             >
-              CARTÃO MÃE
+              CARTÃO CRÉDITO
             </button>
           </div>
         </div>
@@ -126,17 +140,24 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                     R$ {item.valor.toFixed(2)}
                   </td>
                   <td className="py-2.5 px-3 whitespace-nowrap">
-                    <span
-                      className={`px-1.5 py-0.2 text-[9px] font-black uppercase border ${
-                        item.metodo_pagamento === 'cartao_mae'
-                          ? 'border-[#ff0055] text-[#ff0055] bg-black'
-                          : item.metodo_pagamento === 'pix'
-                          ? 'border-[#00f0ff] text-[#00f0ff] bg-black'
-                          : 'border-neutral-700 text-neutral-400 bg-black'
-                      }`}
-                    >
-                      {item.metodo_pagamento.replace('_', ' ')}
-                    </span>
+                    {(() => {
+                      const isCard = item.metodo_pagamento === 'cartao_credito' || 
+                                     item.metodo_pagamento === 'cartao_proprio' || 
+                                     item.metodo_pagamento === 'cartao_mae';
+                      return (
+                        <span
+                          className={`px-1.5 py-0.2 text-[9px] font-black uppercase border ${
+                            isCard
+                              ? 'border-[#00f0ff] text-[#00f0ff] bg-black'
+                              : item.metodo_pagamento === 'pix'
+                              ? 'border-[#00ff66] text-[#00ff66] bg-black'
+                              : 'border-neutral-700 text-neutral-400 bg-black'
+                          }`}
+                        >
+                          {isCard ? 'CARTÃO CRÉDITO' : item.metodo_pagamento.replace('_', ' ')}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-2.5 px-3 whitespace-nowrap">
                     {item.is_impulsive ? (

@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { Lock, Unlock, AlertTriangle, ShieldAlert, CheckSquare, Square } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { formatCurrency } from '../lib/format';
 
 interface EmergencyVaultProps {
   balance: number;
   onEmergencyWithdrawal: (amount: number, reason: string) => void;
+  showValues?: boolean;
 }
 
 export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
   balance,
   onEmergencyWithdrawal,
+  showValues = true,
 }) => {
   const [showBreachModal, setShowBreachModal] = useState(false);
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
   const [checkedTerms, setCheckedTerms] = useState(false);
+
+  const isHidden = !showValues;
 
   const handleOpenBreach = () => {
     sound.playFrictionAlert();
@@ -44,10 +49,10 @@ export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
 
         <div className="text-right">
           <span className="text-xl font-black text-[#ffe600] tracking-tight block">
-            R$ {balance.toFixed(2)}
+            {formatCurrency(balance, isHidden)}
           </span>
           <span className="text-[9px] text-neutral-500 uppercase tracking-widest">
-            STATUS: INTOCÁVEL
+            {isHidden ? 'VALOR PROTEGIDO' : 'STATUS: INTOCÁVEL'}
           </span>
         </div>
       </div>

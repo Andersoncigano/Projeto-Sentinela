@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { BurnRateMetrics, SystemSettings } from '../types/sentinela';
 import { sound } from '../lib/sound';
+import { formatCurrency } from '../lib/format';
 
 interface HeaderProps {
   metrics: BurnRateMetrics;
@@ -26,8 +27,8 @@ interface HeaderProps {
   setIsMuted: (muted: boolean) => void;
   crtEnabled: boolean;
   setCrtEnabled: (val: boolean) => void;
-  hideIncome: boolean;
-  setHideIncome: (val: boolean) => void;
+  showValues: boolean;
+  onToggleShowValues: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,8 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   setIsMuted,
   crtEnabled,
   setCrtEnabled,
-  hideIncome,
-  setHideIncome,
+  showValues,
+  onToggleShowValues,
 }) => {
   const toggleSound = () => {
     const next = !isMuted;
@@ -49,9 +50,9 @@ export const Header: React.FC<HeaderProps> = ({
     if (!next) sound.playTick();
   };
 
-  const togglePrivacy = () => {
+  const handleToggleValues = () => {
     sound.playTick();
-    setHideIncome(!hideIncome);
+    onToggleShowValues();
   };
 
   const getStatusBadge = () => {
@@ -89,6 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const valorHora = settings.renda_mensal / Math.max(1, settings.horas_trabalho_mes);
+  const isHidden = !showValues;
 
   return (
     <header className="border-b border-[#00f0ff]/30 bg-[#04060c]/95 backdrop-blur-md sticky top-0 z-30 font-mono">
@@ -102,11 +104,11 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-neutral-400">HOST: 127.0.0.1</span>
           <span className="text-neutral-700">|</span>
           <span className="text-[#ffe600]">
-            LABOR_CONVERSION: {hideIncome ? 'R$ •••••/HR' : `R$ ${valorHora.toFixed(2)}/HR`} (88H PCD)
+            LABOR_CONVERSION: {formatCurrency(valorHora, isHidden)}/HR (88H PCD)
           </span>
           <span className="text-neutral-700">|</span>
           <span className="text-[#ff0055]">
-            EMERGENCY_RESERVE: {hideIncome ? 'R$ •••••' : 'R$ 1.400,00'} [SEALED]
+            EMERGENCY_RESERVE: {formatCurrency(1400, isHidden)} [SEALED]
           </span>
         </div>
         <div className="flex items-center gap-3 text-neutral-500">
@@ -136,15 +138,21 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-neutral-600">//</span>
                 <button
                   type="button"
-                  onClick={togglePrivacy}
+                  onClick={handleToggleValues}
                   className="flex items-center gap-1.5 px-2 py-0.5 border border-[#ffe600]/50 bg-[#0f0e03] text-[#ffe600] hover:bg-[#ffe600]/20 transition-all cursor-pointer rounded-sm"
-                  title="Clique para alternar o modo de privacidade (Ocultar R$ 850)"
+                  title="Clique para alternar o modo de privacidade (Ocultar Renda de R$ 850)"
                 >
-                  {hideIncome ? <EyeOff className="w-3.5 h-3.5 text-[#ffe600]" /> : <Eye className="w-3.5 h-3.5 text-[#ffe600]" />}
+                  {showValues ? (
+                    <Eye className="w-3.5 h-3.5 text-[#ffe600]" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5 text-[#ffe600]" />
+                  )}
                   <span className="font-bold tracking-wider">
-                    RENDA: {hideIncome ? '••••••' : `R$ ${settings.renda_mensal.toFixed(2)}`}
+                    RENDA: {formatCurrency(settings.renda_mensal, isHidden)}
                   </span>
-                  <span className="text-[9px] text-neutral-400">({hideIncome ? 'OCULTA' : 'CLIQUE P/ OCULTAR'})</span>
+                  <span className="text-[9px] text-neutral-400">
+                    ({showValues ? 'CLIQUE P/ OCULTAR' : 'OCULTA'})
+                  </span>
                 </button>
                 <span className="text-neutral-600">//</span>
                 <span className="text-[#00f0ff]">BURN_CEILING_ALGORITHM</span>
@@ -156,19 +164,23 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end flex-wrap">
             {getStatusBadge()}
 
-            {/* Privacy Mode Toggle (Prominent Eye Button like Banking Apps) */}
+            {/* Privacy Mode Toggle: MOSTRAR RENDA / OCULTAR RENDA */}
             <button
-              onClick={togglePrivacy}
-              className={`px-2.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
-                hideIncome
-                  ? 'border-[#ffe600] bg-[#ffe600] text-black neon-glow-yellow'
-                  : 'border-[#ffe600]/70 bg-black text-[#ffe600] hover:bg-[#ffe600]/20'
+              onClick={handleToggleValues}
+              className={`px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
+                showValues
+                  ? 'border-[#ffe600]/70 bg-black text-[#ffe600] hover:bg-[#ffe600]/20'
+                  : 'border-[#ffe600] bg-[#ffe600] text-black neon-glow-yellow'
               }`}
-              title={hideIncome ? 'Modo Privacidade ativo (Renda oculta). Clique para exibir.' : 'Ocultar renda de R$ 850 (Modo Privacidade como nos apps de banco)'}
+              title={showValues ? 'Ocultar renda e valores sensíveis' : 'Mostrar renda e valores sensíveis'}
             >
-              {hideIncome ? <EyeOff className="w-4 h-4 text-black" /> : <Eye className="w-4 h-4 text-[#ffe600]" />}
+              {showValues ? (
+                <Eye className="w-4 h-4 text-[#ffe600]" />
+              ) : (
+                <EyeOff className="w-4 h-4 text-black" />
+              )}
               <span className="text-[11px] uppercase tracking-wider">
-                {hideIncome ? '👁️‍🗨️ MOSTRAR RENDA' : '👁️ OCULTAR RENDA'}
+                {showValues ? 'OCULTAR RENDA' : 'MOSTRAR RENDA'}
               </span>
             </button>
 
@@ -202,9 +214,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Cyberpunk Tiled Tab Bar (Inspired by Window Modules in image) */}
+        {/* Cyberpunk Tiled Tab Bar */}
         <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#141b2e] overflow-x-auto text-xs pb-0.5">
-          {/* Cockpit Tab (Green Window Style like Media Controller) */}
           <button
             onClick={() => setActiveTab('cockpit')}
             className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
@@ -217,7 +228,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>[ 01 // COCKPIT_OPERACIONAL ]</span>
           </button>
 
-          {/* Simulator Tab (Yellow Window Style like Audio Volume) */}
           <button
             onClick={() => setActiveTab('simulator')}
             className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
@@ -230,7 +240,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>[ 02 // SIMULADOR_QUEIMA ]</span>
           </button>
 
-          {/* Python Code Tab (Cyan Window Style like Keyboard Switcher) */}
           <button
             onClick={() => setActiveTab('python_code')}
             className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
@@ -243,7 +252,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>[ 03 // CÓDIGO_PYTHON & ARQUITETURA ]</span>
           </button>
 
-          {/* Nudge Manual Tab (Pink Window Style like KDE Daemon) */}
           <button
             onClick={() => setActiveTab('nudge_manual')}
             className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${

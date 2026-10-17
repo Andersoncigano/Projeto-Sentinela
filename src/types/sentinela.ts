@@ -1,4 +1,4 @@
-export type PaymentMethod = 'pix' | 'cartao_mae' | 'cartao_proprio' | 'dinheiro' | 'debito' | 'outro';
+export type PaymentMethod = 'pix' | 'cartao_credito' | 'dinheiro' | 'debito' | 'cartao_proprio' | 'cartao_mae' | 'outro';
 
 export type Category = 
   | 'alimentacao_impulsiva' 

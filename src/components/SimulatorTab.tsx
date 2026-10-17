@@ -10,31 +10,54 @@ interface SimulatorTabProps {
 
 export const SimulatorTab: React.FC<SimulatorTabProps> = ({ metrics, settings }) => {
   const [simValue, setSimValue] = useState<number>(45);
-  const [simMethod, setSimMethod] = useState<'pix' | 'cartao_mae' | 'dinheiro'>('pix');
+  const [simMethod, setSimMethod] = useState<'pix' | 'cartao_credito' | 'dinheiro'>('pix');
 
   const impact = SentinelaBurnEngine.simulateImpact(metrics, simValue, settings);
-  const isCartaoMae = simMethod === 'cartao_mae';
+  const isCartao = simMethod === 'cartao_credito';
+
+  const handleReset = () => {
+    setSimValue(45);
+    setSimMethod('pix');
+  };
 
   return (
     <div className="space-y-4 font-mono">
       {/* Title & Concept Card */}
-      <div className="border border-[#ffe600]/40 bg-[#070602]/95 p-4 shadow-xl">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#ffe600] text-black font-extrabold text-[11px] tracking-wider uppercase mb-1">
-          <Calculator className="w-3.5 h-3.5 text-black" />
-          <span>[ SIMULADOR DE QUEIMA // MOVING CEILING ALGORITHM ]</span>
+      <div className="border border-[#ffe600]/40 bg-[#070602]/95 p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#ffe600] text-black font-extrabold text-[11px] tracking-wider uppercase mb-1">
+            <Calculator className="w-3.5 h-3.5 text-black" />
+            <span>[ SIMULADOR DE QUEIMA // MOVING CEILING ALGORITHM ]</span>
+          </div>
+          <p className="text-xs text-neutral-400 mt-1">
+            Requisito de Engenharia #2: Calcule a punição instantânea no teto diário antes de autorizar qualquer desembolso.
+          </p>
         </div>
-        <p className="text-xs text-neutral-400 mt-1">
-          Requisito de Engenharia #2: Calcule a punição instantânea no teto diário antes de autorizar qualquer desembolso.
-        </p>
+        <button
+          type="button"
+          onClick={handleReset}
+          className="px-3 py-1 border border-neutral-700 bg-black text-neutral-400 hover:text-[#00f0ff] hover:border-[#00f0ff] text-xs font-bold uppercase transition-all flex items-center gap-1 cursor-pointer flex-shrink-0"
+        >
+          [ ✕ REDEFINIR SIMULAÇÃO ]
+        </button>
       </div>
 
       {/* Simulator Interactive Cockpit */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Controls Column */}
         <div className="lg:col-span-5 border border-neutral-800 bg-[#04060d]/95 p-4 space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#ffe600]">
-            // PARÂMETROS DO GASTO SIMULADO
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#ffe600]">
+              // PARÂMETROS DO GASTO SIMULADO
+            </h3>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="text-[10px] text-neutral-500 hover:text-white uppercase"
+            >
+              LIMPAR
+            </button>
+          </div>
 
           <div>
             <div className="flex justify-between items-center text-xs mb-2">
@@ -69,7 +92,7 @@ export const SimulatorTab: React.FC<SimulatorTabProps> = ({ metrics, settings })
               <button
                 type="button"
                 onClick={() => setSimMethod('pix')}
-                className={`py-1.5 px-2 border text-center transition-all ${
+                className={`py-1.5 px-2 border text-center transition-all cursor-pointer ${
                   simMethod === 'pix'
                     ? 'bg-[#00f0ff] border-[#00f0ff] text-black font-bold'
                     : 'bg-black border-neutral-800 text-neutral-400 hover:text-white'
@@ -79,19 +102,19 @@ export const SimulatorTab: React.FC<SimulatorTabProps> = ({ metrics, settings })
               </button>
               <button
                 type="button"
-                onClick={() => setSimMethod('cartao_mae')}
-                className={`py-1.5 px-2 border text-center transition-all ${
-                  simMethod === 'cartao_mae'
-                    ? 'bg-[#ff0055] border-[#ff0055] text-black font-black'
-                    : 'bg-black border-neutral-800 text-neutral-400 hover:text-[#ff0055]'
+                onClick={() => setSimMethod('cartao_credito')}
+                className={`py-1.5 px-2 border text-center transition-all cursor-pointer ${
+                  simMethod === 'cartao_credito'
+                    ? 'bg-[#00f0ff] border-[#00f0ff] text-black font-black'
+                    : 'bg-black border-neutral-800 text-neutral-400 hover:text-[#00f0ff]'
                 }`}
               >
-                CARTÃO MÃE
+                CARTÃO CRÉDITO
               </button>
               <button
                 type="button"
                 onClick={() => setSimMethod('dinheiro')}
-                className={`py-1.5 px-2 border text-center transition-all ${
+                className={`py-1.5 px-2 border text-center transition-all cursor-pointer ${
                   simMethod === 'dinheiro'
                     ? 'bg-[#00ff66] border-[#00ff66] text-black font-bold'
                     : 'bg-black border-neutral-800 text-neutral-400 hover:text-white'
@@ -102,14 +125,14 @@ export const SimulatorTab: React.FC<SimulatorTabProps> = ({ metrics, settings })
             </div>
           </div>
 
-          {isCartaoMae && (
-            <div className="p-3 bg-[#180309] border border-[#ff0055] text-xs text-[#ff3377] space-y-1">
+          {isCartao && (
+            <div className="p-3 bg-[#031118] border border-[#00f0ff] text-xs text-[#00f0ff] space-y-1">
               <p className="font-bold flex items-center gap-1.5 text-[11px]">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#ff0055]" />
-                // ALERTA: PASSIVO DO CARTÃO DA MÃE
+                <AlertTriangle className="w-3.5 h-3.5 text-[#00f0ff]" />
+                // AVISO: FATURA DO CARTÃO DE CRÉDITO
               </p>
               <p className="text-[10px] text-neutral-300">
-                Gastar R$ {simValue.toFixed(2)} no cartão de terceiros consumirá o salário do próximo mês e aumentará sua dependência.
+                Gastar R$ {simValue.toFixed(2)} no cartão de crédito entrará na sua próxima fatura, que você precisará pagar no vencimento.
               </p>
             </div>
           )}

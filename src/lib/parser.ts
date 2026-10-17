@@ -1,25 +1,24 @@
 import { ExpenseRecord, ParseResult, PaymentMethod, Category, ParsedTokens } from '../types/sentinela';
 
 const IMPULSIVE_KEYWORDS = new Set([
-  'lanche', 'ifood', 'uber', 'delivery', 'hamburguer', 'pizza', 'doce',
-  'chocolate', 'acai', 'açaí', 'cerveja', 'bar', 'skin', 'jogo', 'steam',
-  'game', 'aliexpress', 'shopee', 'compra', 'besteira', 'fastfood',
-  'mcdonalds', 'burger', 'snack', 'refrigerante', 'balada', 'copo', 'tabacaria'
+  'lanche', 'ifood', 'delivery', 'hamburguer', 'pizza', 'doce',
+  'chocolate', 'acai', 'açaí', 'chopp', 'chope', 'choppinho', 'cerveja', 'cervejinha',
+  'bar', 'drink', 'skin', 'jogo', 'steam', 'game', 'aliexpress', 'shopee', 'compra',
+  'besteira', 'fastfood', 'mcdonalds', 'burger', 'snack', 'refrigerante', 'balada', 'copo', 'tabacaria'
 ]);
 
 const ESSENTIAL_KEYWORDS = new Set([
-  'remedio', 'remédio', 'farmacia', 'farmácia', 'onibus', 'ônibus', 'metro', 'metrô',
+  'uber', 'taxi', '99', 'remedio', 'remédio', 'farmacia', 'farmácia', 'onibus', 'ônibus', 'metro', 'metrô',
   'passagem', 'consulta', 'aluguel', 'luz', 'agua', 'água', 'internet',
   'arroz', 'feijao', 'feijão', 'supermercado', 'mercado', 'leite', 'pao', 'pão',
   'frango', 'ovo', 'gas', 'gás', 'medico', 'médico'
 ]);
 
 const PAYMENT_METHOD_MAP: Array<{ pattern: RegExp; method: PaymentMethod }> = [
-  { pattern: /\b(cart[aã]o\s+d?a?\s*m[aã]e|m[aã]e)\b/i, method: 'cartao_mae' },
+  { pattern: /\b(cart[aã]o(?:\s*d[eé]\s*cr[eé]dito|\s*cr[eé]dito)?|cr[eé]dito|cart[aã]o\s*d?a?\s*m[aã]e|m[aã]e)\b/i, method: 'cartao_credito' },
   { pattern: /\b(pix|px)\b/i, method: 'pix' },
   { pattern: /\b(dinheiro|cash|esp[eé]cie)\b/i, method: 'dinheiro' },
   { pattern: /\b(d[eé]bito)\b/i, method: 'debito' },
-  { pattern: /\b(cart[aã]o|cr[eé]dito)\b/i, method: 'cartao_proprio' },
 ];
 
 export class SentinelaParser {
@@ -118,6 +117,8 @@ export class SentinelaParser {
       isImpulsive = true;
       if (words.some(w => ['lanche', 'ifood', 'pizza', 'hamburguer', 'doce', 'acai', 'açaí'].includes(w))) {
         category = 'alimentacao_impulsiva';
+      } else if (words.some(w => ['chopp', 'chope', 'choppinho', 'cerveja', 'cervejinha', 'bar', 'drink'].includes(w))) {
+        category = 'lazer_impulsivo';
       } else {
         category = 'lazer_impulsivo';
       }
@@ -125,18 +126,13 @@ export class SentinelaParser {
       isImpulsive = false;
       if (words.some(w => ['remedio', 'remédio', 'farmacia', 'farmácia', 'consulta', 'medico'].includes(w))) {
         category = 'saude';
-      } else if (words.some(w => ['onibus', 'ônibus', 'metro', 'metrô', 'passagem', 'uber'].includes(w))) {
+      } else if (words.some(w => ['onibus', 'ônibus', 'metro', 'metrô', 'passagem', 'uber', 'taxi', '99'].includes(w))) {
         category = 'transporte';
       } else {
         category = 'essencial';
       }
     } else {
       category = 'outros';
-    }
-
-    // Regra comportamental severa: Usar Cartão da Mãe para algo não estritamente essencial = flag impulsiva imediata
-    if (extractedMethod === 'cartao_mae' && category !== 'saude' && category !== 'essencial') {
-      isImpulsive = true;
     }
 
     const tokens: ParsedTokens = {

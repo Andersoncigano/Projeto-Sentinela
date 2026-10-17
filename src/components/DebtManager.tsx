@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle, Plus, HeartHandshake, ShieldCheck } from 'lucide-react';
+import { CreditCard, CheckCircle, Plus, HeartHandshake } from 'lucide-react';
 import { DebtRecord, BurnRateMetrics } from '../types/sentinela';
 import { sound } from '../lib/sound';
+import { formatCurrency } from '../lib/format';
 
 interface DebtManagerProps {
   debts: DebtRecord[];
   metrics: BurnRateMetrics;
   onAmortize: (debtId: string, amount: number) => void;
   onAddDebt: (debt: Omit<DebtRecord, 'id'>) => void;
+  showValues?: boolean;
 }
 
 export const DebtManager: React.FC<DebtManagerProps> = ({
@@ -15,6 +17,7 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
   metrics,
   onAmortize,
   onAddDebt,
+  showValues = true,
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCredor, setNewCredor] = useState('');
@@ -22,6 +25,8 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
   const [newMeta, setNewMeta] = useState('');
 
   const [amortInputs, setAmortInputs] = useState<Record<string, string>>({});
+
+  const isHidden = !showValues;
 
   const handleAmortizeSubmit = (debtId: string, maxVal: number) => {
     const val = parseFloat(amortInputs[debtId] || '0');
@@ -61,7 +66,7 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-[#00f0ff]/20">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#00f0ff] text-black font-extrabold text-[11px] tracking-wider uppercase">
           <CreditCard className="w-3.5 h-3.5 text-black" />
-          <span>[ GESTÃO DE PASSIVOS // DÍVIDA COM TERCEIROS ]</span>
+          <span>[ GESTÃO DE PASSIVOS // FATURA DO CARTÃO DE CRÉDITO ]</span>
         </div>
 
         <button
@@ -69,7 +74,7 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
           className="px-2.5 py-1 border border-[#00f0ff] bg-black text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black text-xs font-bold uppercase transition-all flex items-center gap-1 cursor-pointer"
         >
           <Plus className="w-3 h-3" />
-          <span>{showAddForm ? 'FECHAR' : '+ NOVO PASSIVO'}</span>
+          <span>{showAddForm ? 'FECHAR' : '+ NOVO PASSIVO / FATURA'}</span>
         </button>
       </div>
 
@@ -77,9 +82,9 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
       <div className="my-3 p-2.5 bg-black border border-[#00f0ff]/40 text-xs text-[#00f0ff] flex items-start gap-2.5">
         <HeartHandshake className="w-4 h-4 text-[#00f0ff] flex-shrink-0 mt-0.5" />
         <div className="space-y-0.5 text-[11px]">
-          <p className="font-bold text-[#00f0ff] uppercase">// ESCROW DE HONRA FAMILIAR ATIVO</p>
+          <p className="font-bold text-[#00f0ff] uppercase">// PROVISÃO DA FATURA DO CARTÃO ATIVA</p>
           <p className="text-neutral-300">
-            Retenção de <strong>R$ {metrics.amortizacao_obrigatoria.toFixed(2)}</strong> sequestrada do orçamento no dia 1 do mês. O teto diário não libera supérfluos enquanto o passivo com a mãe estiver pendente.
+            Retenção de <strong>{formatCurrency(metrics.amortizacao_obrigatoria, isHidden)}</strong> provisionada do orçamento no dia 1 do mês. O sistema protege esse montante para assegurar a quitação total da fatura no vencimento.
           </p>
         </div>
       </div>
@@ -87,13 +92,26 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
       {/* Add Debt Form */}
       {showAddForm && (
         <form onSubmit={handleCreateDebt} className="mb-4 p-3 bg-black border border-[#00f0ff] text-xs space-y-3">
-          <h4 className="font-bold text-[#00f0ff] uppercase">// Cadastrar Novo Passivo</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-[#00f0ff] uppercase">// Cadastrar Novo Passivo / Cartão</h4>
+            <button
+              type="button"
+              onClick={() => {
+                setNewCredor('');
+                setNewTotal('');
+                setNewMeta('');
+              }}
+              className="text-[10px] text-neutral-400 hover:text-[#ff0055] uppercase"
+            >
+              [ ✕ Limpar Campos ]
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-neutral-400 block mb-1 text-[10px]">CREDOR / CARTÃO</label>
+              <label className="text-neutral-400 block mb-1 text-[10px]">CREDOR / FATURA DO CARTÃO</label>
               <input
                 type="text"
-                placeholder="Ex: Mãe - Fatura Cartão"
+                placeholder="Ex: Fatura Cartão de Crédito"
                 value={newCredor}
                 onChange={(e) => setNewCredor(e.target.value)}
                 className="w-full bg-[#0a0f1d] border border-neutral-700 p-2 text-[#e0f2fe]"
@@ -101,7 +119,7 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
               />
             </div>
             <div>
-              <label className="text-neutral-400 block mb-1 text-[10px]">VALOR TOTAL (R$)</label>
+              <label className="text-neutral-400 block mb-1 text-[10px]">VALOR TOTAL DA FATURA (R$)</label>
               <input
                 type="number"
                 step="0.01"
@@ -113,7 +131,7 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
               />
             </div>
             <div>
-              <label className="text-neutral-400 block mb-1 text-[10px]">META MENSAL (R$)</label>
+              <label className="text-neutral-400 block mb-1 text-[10px]">PAGAMENTO MENSAL PROGRAMADO (R$)</label>
               <input
                 type="number"
                 step="0.01"
@@ -131,11 +149,11 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
               onClick={() => setShowAddForm(false)}
               className="px-3 py-1 bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white"
             >
-              CANCELAR
+              CANCELAR / FECHAR
             </button>
             <button
               type="submit"
-              className="px-4 py-1 bg-[#00f0ff] text-black font-black uppercase"
+              className="px-4 py-1 bg-[#00f0ff] text-black font-black uppercase cursor-pointer"
             >
               SALVAR PASSIVO
             </button>
@@ -177,8 +195,8 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
 
                 <div className="text-[11px] text-neutral-400">
                   <span>PAGO: </span>
-                  <strong className="text-[#00ff66]">R$ {debt.valor_pago.toFixed(2)}</strong>
-                  <span> / R$ {debt.valor_total.toFixed(2)}</span>
+                  <strong className="text-[#00ff66]">{formatCurrency(debt.valor_pago, isHidden)}</strong>
+                  <span> / {formatCurrency(debt.valor_total, isHidden)}</span>
                 </div>
               </div>
 
@@ -196,8 +214,8 @@ export const DebtManager: React.FC<DebtManagerProps> = ({
               {!isQuitada && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-2 border-t border-neutral-900 text-xs">
                   <div className="text-[11px] text-neutral-400">
-                    DEVEDOR: <span className="text-[#ff0055] font-black">R$ {saldoDevedor.toFixed(2)}</span>
-                    <span className="text-neutral-500 ml-2">(META MÊS: R$ {debt.meta_amortizacao_mes.toFixed(2)})</span>
+                    DEVEDOR: <span className="text-[#ff0055] font-black">{formatCurrency(saldoDevedor, isHidden)}</span>
+                    <span className="text-neutral-500 ml-2">(META MÊS: {formatCurrency(debt.meta_amortizacao_mes, isHidden)})</span>
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
