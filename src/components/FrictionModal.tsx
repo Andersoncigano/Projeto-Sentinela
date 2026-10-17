@@ -75,7 +75,7 @@ export const FrictionModal: React.FC<FrictionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md font-mono animate-in fade-in duration-150">
-      <div className="w-full max-w-xl bg-[#070308] border-2 border-[#ff0055] shadow-2xl neon-glow-pink relative">
+      <div className="w-full max-w-xl bg-[#070308] border-2 border-[#ff0055] shadow-2xl neon-glow-pink relative max-h-[92vh] overflow-y-auto">
         {/* Top Cyberpunk Hazard Header com Botão de Voltar / Fechar */}
         <div className="bg-[#ff0055] text-black px-4 py-2 flex items-center justify-between font-black text-xs tracking-widest uppercase">
           <div className="flex items-center gap-2">
