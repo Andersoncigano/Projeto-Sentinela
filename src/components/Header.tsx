@@ -131,15 +131,24 @@ export const Header: React.FC<HeaderProps> = ({
                   CYBER-DECK
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400 flex items-center gap-2">
+              <div className="text-[11px] text-neutral-400 flex items-center gap-2 flex-wrap mt-0.5">
                 <span className="text-[#00ff66]">[PCD_MEIO_PERIODO]</span>
                 <span className="text-neutral-600">//</span>
-                <span className="text-neutral-200">
-                  RENDA: {hideIncome ? 'R$ •••••' : `R$ ${settings.renda_mensal.toFixed(2)}`}
-                </span>
+                <button
+                  type="button"
+                  onClick={togglePrivacy}
+                  className="flex items-center gap-1.5 px-2 py-0.5 border border-[#ffe600]/50 bg-[#0f0e03] text-[#ffe600] hover:bg-[#ffe600]/20 transition-all cursor-pointer rounded-sm"
+                  title="Clique para alternar o modo de privacidade (Ocultar R$ 850)"
+                >
+                  {hideIncome ? <EyeOff className="w-3.5 h-3.5 text-[#ffe600]" /> : <Eye className="w-3.5 h-3.5 text-[#ffe600]" />}
+                  <span className="font-bold tracking-wider">
+                    RENDA: {hideIncome ? '••••••' : `R$ ${settings.renda_mensal.toFixed(2)}`}
+                  </span>
+                  <span className="text-[9px] text-neutral-400">({hideIncome ? 'OCULTA' : 'CLIQUE P/ OCULTAR'})</span>
+                </button>
                 <span className="text-neutral-600">//</span>
-                <span className="text-[#ffe600]">BURN_CEILING_ALGORITHM</span>
-              </p>
+                <span className="text-[#00f0ff]">BURN_CEILING_ALGORITHM</span>
+              </div>
             </div>
           </div>
 
@@ -147,18 +156,20 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end flex-wrap">
             {getStatusBadge()}
 
-            {/* Privacy Mode Toggle (Eye Icon like Banking Apps) */}
+            {/* Privacy Mode Toggle (Prominent Eye Button like Banking Apps) */}
             <button
               onClick={togglePrivacy}
-              className={`p-1.5 border text-xs transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
                 hideIncome
-                  ? 'border-[#ffe600] bg-[#ffe600]/15 text-[#ffe600] neon-glow-yellow'
-                  : 'border-neutral-800 text-neutral-400 hover:text-[#00f0ff] hover:border-[#00f0ff]/50'
+                  ? 'border-[#ffe600] bg-[#ffe600] text-black neon-glow-yellow'
+                  : 'border-[#ffe600]/70 bg-black text-[#ffe600] hover:bg-[#ffe600]/20'
               }`}
               title={hideIncome ? 'Modo Privacidade ativo (Renda oculta). Clique para exibir.' : 'Ocultar renda de R$ 850 (Modo Privacidade como nos apps de banco)'}
             >
-              {hideIncome ? <EyeOff className="w-3.5 h-3.5 text-[#ffe600]" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="text-[10px] font-bold">{hideIncome ? 'OCULTA' : 'PRIVACIDADE'}</span>
+              {hideIncome ? <EyeOff className="w-4 h-4 text-black" /> : <Eye className="w-4 h-4 text-[#ffe600]" />}
+              <span className="text-[11px] uppercase tracking-wider">
+                {hideIncome ? '👁️‍🗨️ MOSTRAR RENDA' : '👁️ OCULTAR RENDA'}
+              </span>
             </button>
 
             {/* CRT Scanline Toggle */}
