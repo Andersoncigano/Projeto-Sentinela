@@ -1,27 +1,31 @@
 import React from 'react';
-import { Flame, Clock, CreditCard, Target, TrendingDown, Terminal, AlertTriangle } from 'lucide-react';
+import { Flame, Clock, CreditCard, Target, TrendingDown } from 'lucide-react';
 import { BurnRateMetrics, DebtRecord, SystemSettings } from '../types/sentinela';
 
 interface MetricCardsProps {
   metrics: BurnRateMetrics;
   settings: SystemSettings;
   debts: DebtRecord[];
+  hideIncome?: boolean;
 }
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ metrics, settings, debts }) => {
+export const MetricCards: React.FC<MetricCardsProps> = ({ 
+  metrics, 
+  settings, 
+  debts, 
+  hideIncome = false 
+}) => {
   const totalDividasRestantes = debts.reduce(
     (acc, d) => acc + Math.max(0, d.valor_total - d.valor_pago),
     0
   );
 
   const deltaTeto = metrics.teto_diario_atual - metrics.teto_diario_ideal;
-  const isTetoCritico = metrics.teto_diario_atual < metrics.teto_diario_ideal * 0.5;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-      {/* TILE 1: TETO MÓVEL DIÁRIO (Cyber Green Window Style - Like Media Controller in image) */}
+      {/* TILE 1: TETO MÓVEL DIÁRIO */}
       <div className="border border-[#00ff66]/70 bg-[#030c07]/90 p-3.5 relative shadow-lg shadow-[#00ff66]/10">
-        {/* Floating Header Tag */}
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00ff66] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
           <Target className="w-3 h-3 text-black" />
           <span>Teto Móvel Diário</span>
@@ -44,7 +48,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ metrics, settings, deb
         </div>
       </div>
 
-      {/* TILE 2: SALDO LIVRE (Cyber Yellow Window Style - Like Audio Volume in image) */}
+      {/* TILE 2: SALDO LIVRE (Com respeito ao modo privacidade) */}
       <div className="border border-[#ffe600]/70 bg-[#0f0e03]/90 p-3.5 relative shadow-lg shadow-[#ffe600]/10">
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#ffe600] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
           <TrendingDown className="w-3 h-3 text-black" />
@@ -56,7 +60,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ metrics, settings, deb
             R$ {metrics.saldo_restante.toFixed(2)}
           </span>
           <span className="text-[10px] text-neutral-400">
-            de R$ {metrics.saldo_disponivel_inicial.toFixed(0)}
+            de {hideIncome ? 'R$ •••••' : `R$ ${metrics.saldo_disponivel_inicial.toFixed(0)}`}
           </span>
         </div>
 
@@ -70,11 +74,11 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ metrics, settings, deb
 
         <div className="mt-2 text-[10px] text-neutral-400 flex justify-between">
           <span>QUEIMADO: {metrics.burn_rate_percent.toFixed(0)}%</span>
-          <span className="text-[#ffe600]">DISPONÍVEL</span>
+          <span className="text-[#ffe600]">{hideIncome ? 'PROTEGIDO' : 'DISPONÍVEL'}</span>
         </div>
       </div>
 
-      {/* TILE 3: GASTOS IMPULSIVOS & HORAS PCD (Cyber Pink Window Style - Like KDE Daemon in image) */}
+      {/* TILE 3: GASTOS IMPULSIVOS & HORAS PCD */}
       <div className="border border-[#ff0055]/80 bg-[#140309]/90 p-3.5 relative shadow-lg shadow-[#ff0055]/15">
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#ff0055] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
           <Flame className="w-3 h-3 text-black" />
@@ -98,7 +102,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ metrics, settings, deb
         </div>
       </div>
 
-      {/* TILE 4: CARTÃO MÃE / PASSIVO (Cyber Cyan Window Style - Like Keyboard Layout Switcher in image) */}
+      {/* TILE 4: CARTÃO MÃE / PASSIVO */}
       <div className="border border-[#00f0ff]/70 bg-[#030e14]/90 p-3.5 relative shadow-lg shadow-[#00f0ff]/10">
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00f0ff] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
           <CreditCard className="w-3 h-3 text-black" />

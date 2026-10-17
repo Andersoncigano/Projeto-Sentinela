@@ -86,9 +86,14 @@ with st.sidebar:
     st.divider()
 
     st.subheader("⚙️ Contexto Orçamentário")
-    st.markdown(f"**Renda Mensal (PCD):** R$ {settings.renda_mensal:,.2f}")
+    hide_income = st.checkbox("👁️ Ocultar Renda de R$ 850 (Modo Privacidade)", value=False)
+    
+    renda_display = "R$ •••••" if hide_income else f"R$ {settings.renda_mensal:,.2f}"
+    hora_display = "R$ •••••/h" if hide_income else f"R$ {(settings.renda_mensal / settings.horas_trabalho_mes):.2f}/h"
+    
+    st.markdown(f"**Renda Mensal (PCD):** {renda_display}")
     st.markdown(f"**Jornada de Trabalho:** {settings.horas_trabalho_mes:.0f}h / mês")
-    st.markdown(f"**Valor da Sua Hora:** R$ {(settings.renda_mensal / settings.horas_trabalho_mes):.2f}/h")
+    st.markdown(f"**Valor da Sua Hora:** {hora_display}")
     st.markdown(f"**Custos Fixos Essenciais:** R$ {settings.custos_fixos_essenciais:,.2f}")
 
     st.divider()

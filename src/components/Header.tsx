@@ -10,7 +10,9 @@ import {
   BookOpen, 
   AlertTriangle,
   Tv,
-  Cpu
+  Cpu,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { BurnRateMetrics, SystemSettings } from '../types/sentinela';
 import { sound } from '../lib/sound';
@@ -24,6 +26,8 @@ interface HeaderProps {
   setIsMuted: (muted: boolean) => void;
   crtEnabled: boolean;
   setCrtEnabled: (val: boolean) => void;
+  hideIncome: boolean;
+  setHideIncome: (val: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,12 +39,19 @@ export const Header: React.FC<HeaderProps> = ({
   setIsMuted,
   crtEnabled,
   setCrtEnabled,
+  hideIncome,
+  setHideIncome,
 }) => {
   const toggleSound = () => {
     const next = !isMuted;
     setIsMuted(next);
     sound.setMuted(next);
     if (!next) sound.playTick();
+  };
+
+  const togglePrivacy = () => {
+    sound.playTick();
+    setHideIncome(!hideIncome);
   };
 
   const getStatusBadge = () => {
@@ -90,9 +101,13 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-neutral-700">|</span>
           <span className="text-neutral-400">HOST: 127.0.0.1</span>
           <span className="text-neutral-700">|</span>
-          <span className="text-[#ffe600]">LABOR_CONVERSION: R$ {valorHora.toFixed(2)}/HR (88H PCD)</span>
+          <span className="text-[#ffe600]">
+            LABOR_CONVERSION: {hideIncome ? 'R$ •••••/HR' : `R$ ${valorHora.toFixed(2)}/HR`} (88H PCD)
+          </span>
           <span className="text-neutral-700">|</span>
-          <span className="text-[#ff0055]">EMERGENCY_RESERVE: R$ 1.400,00 [SEALED]</span>
+          <span className="text-[#ff0055]">
+            EMERGENCY_RESERVE: {hideIncome ? 'R$ •••••' : 'R$ 1.400,00'} [SEALED]
+          </span>
         </div>
         <div className="flex items-center gap-3 text-neutral-500">
           <span>PORT: 3000 // STREAMLIT_READY</span>
@@ -119,7 +134,9 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-[11px] text-neutral-400 flex items-center gap-2">
                 <span className="text-[#00ff66]">[PCD_MEIO_PERIODO]</span>
                 <span className="text-neutral-600">//</span>
-                <span className="text-neutral-200">RENDA: R$ {settings.renda_mensal.toFixed(2)}</span>
+                <span className="text-neutral-200">
+                  RENDA: {hideIncome ? 'R$ •••••' : `R$ ${settings.renda_mensal.toFixed(2)}`}
+                </span>
                 <span className="text-neutral-600">//</span>
                 <span className="text-[#ffe600]">BURN_CEILING_ALGORITHM</span>
               </p>
@@ -127,13 +144,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Status Badge & Cyberpunk Hardware Toggles */}
-          <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
+          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end flex-wrap">
             {getStatusBadge()}
+
+            {/* Privacy Mode Toggle (Eye Icon like Banking Apps) */}
+            <button
+              onClick={togglePrivacy}
+              className={`p-1.5 border text-xs transition-all flex items-center gap-1 cursor-pointer ${
+                hideIncome
+                  ? 'border-[#ffe600] bg-[#ffe600]/15 text-[#ffe600] neon-glow-yellow'
+                  : 'border-neutral-800 text-neutral-400 hover:text-[#00f0ff] hover:border-[#00f0ff]/50'
+              }`}
+              title={hideIncome ? 'Modo Privacidade ativo (Renda oculta). Clique para exibir.' : 'Ocultar renda de R$ 850 (Modo Privacidade como nos apps de banco)'}
+            >
+              {hideIncome ? <EyeOff className="w-3.5 h-3.5 text-[#ffe600]" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="text-[10px] font-bold">{hideIncome ? 'OCULTA' : 'PRIVACIDADE'}</span>
+            </button>
 
             {/* CRT Scanline Toggle */}
             <button
               onClick={() => setCrtEnabled(!crtEnabled)}
-              className={`p-1.5 border text-xs transition-all flex items-center gap-1 ${
+              className={`p-1.5 border text-xs transition-all flex items-center gap-1 cursor-pointer ${
                 crtEnabled
                   ? 'border-[#00f0ff] bg-[#00f0ff]/10 text-[#00f0ff] neon-glow-cyan'
                   : 'border-neutral-800 text-neutral-600 hover:text-neutral-400'
@@ -147,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Audio Toggle */}
             <button
               onClick={toggleSound}
-              className={`p-1.5 border text-xs transition-all flex items-center gap-1 ${
+              className={`p-1.5 border text-xs transition-all flex items-center gap-1 cursor-pointer ${
                 isMuted
                   ? 'border-neutral-800 text-neutral-600 hover:text-neutral-400'
                   : 'border-[#ff0055] bg-[#ff0055]/10 text-[#ff0055] neon-glow-pink'
@@ -165,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Cockpit Tab (Green Window Style like Media Controller) */}
           <button
             onClick={() => setActiveTab('cockpit')}
-            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border ${
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
               activeTab === 'cockpit'
                 ? 'border-[#00ff66] bg-[#00ff66] text-black font-black neon-glow-green'
                 : 'border-[#00ff66]/40 bg-[#030e07] text-[#00ff66] hover:bg-[#00ff66]/10'
@@ -178,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Simulator Tab (Yellow Window Style like Audio Volume) */}
           <button
             onClick={() => setActiveTab('simulator')}
-            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border ${
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
               activeTab === 'simulator'
                 ? 'border-[#ffe600] bg-[#ffe600] text-black font-black neon-glow-yellow'
                 : 'border-[#ffe600]/40 bg-[#0f0e03] text-[#ffe600] hover:bg-[#ffe600]/10'
@@ -191,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Python Code Tab (Cyan Window Style like Keyboard Switcher) */}
           <button
             onClick={() => setActiveTab('python_code')}
-            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border ${
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
               activeTab === 'python_code'
                 ? 'border-[#00f0ff] bg-[#00f0ff] text-black font-black neon-glow-cyan'
                 : 'border-[#00f0ff]/40 bg-[#030c12] text-[#00f0ff] hover:bg-[#00f0ff]/10'
@@ -204,7 +235,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Nudge Manual Tab (Pink Window Style like KDE Daemon) */}
           <button
             onClick={() => setActiveTab('nudge_manual')}
-            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border ${
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
               activeTab === 'nudge_manual'
                 ? 'border-[#ff0055] bg-[#ff0055] text-black font-black neon-glow-pink'
                 : 'border-[#ff0055]/40 bg-[#120308] text-[#ff0055] hover:bg-[#ff0055]/10'

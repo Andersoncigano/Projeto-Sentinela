@@ -102,6 +102,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual'>('cockpit');
   const [isMuted, setIsMuted] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
+  const [hideIncome, setHideIncome] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sentinela_hide_income');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [pendingFrictionExpense, setPendingFrictionExpense] = useState<ExpenseRecord | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -117,6 +121,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sentinela_expenses', JSON.stringify(expenses));
   }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('sentinela_hide_income', JSON.stringify(hideIncome));
+  }, [hideIncome]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -181,6 +189,11 @@ export default function App() {
     showToast(`🚨 [ICE_BREACH] Violação do cofre registrada: R$ ${amount.toFixed(2)}`);
   };
 
+  const handleToggleHideIncome = (val: boolean) => {
+    setHideIncome(val);
+    showToast(val ? '👁️ [MODO_PRIVACIDADE_ATIVADO] Renda e valores ocultos.' : '👁️ [MODO_PRIVACIDADE_DESATIVADO] Valores visíveis.');
+  };
+
   return (
     <div className="min-h-screen bg-[#030407] text-[#e0f2fe] flex flex-col font-mono selection:bg-[#00f0ff] selection:text-black relative">
       {/* CRT Scanline & Curved Vignette Overlays (Matches reference image terminal) */}
@@ -201,6 +214,8 @@ export default function App() {
         setIsMuted={setIsMuted}
         crtEnabled={crtEnabled}
         setCrtEnabled={setCrtEnabled}
+        hideIncome={hideIncome}
+        setHideIncome={handleToggleHideIncome}
       />
 
       {/* Main Cockpit Space */}
@@ -217,7 +232,12 @@ export default function App() {
         {activeTab === 'cockpit' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Top Metric Cards */}
-            <MetricCards metrics={metrics} settings={settings} debts={debts} />
+            <MetricCards 
+              metrics={metrics} 
+              settings={settings} 
+              debts={debts} 
+              hideIncome={hideIncome} 
+            />
 
             {/* Raw Input Terminal (NLP / Regex Parser) */}
             <RawInputTerminal
@@ -286,7 +306,7 @@ export default function App() {
       <footer className="border-t border-[#141b2e] bg-[#020306] py-3 text-center text-[10px] text-neutral-500 relative z-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="text-[#00f0ff]/70">// SISTEMA SENTINELA :: CYBERPUNK HUD EDITION</span>
-          <span className="text-neutral-600">NUDGE THEORY • MOVING CEILING • STREAMLIT + SQLITE READY</span>
+          <span className="text-neutral-600">NUDGE THEORY • MOVING CEILING • PRIVACY MODE SUPPORTED</span>
         </div>
       </footer>
     </div>
