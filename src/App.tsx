@@ -384,6 +384,8 @@ export default function App() {
               setInputVal={setTerminalInput}
               onRegisterExpense={handleRegisterExpense}
               onRequestFrictionCheck={handleFrictionCheck}
+              expenses={expenses}
+              onBatchRegister={(newExps) => handleImportBatchExpenses(newExps, selectedMonth)}
             />
 
             {/* Grid: Debt Management & Emergency Vault */}

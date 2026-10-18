@@ -18,6 +18,8 @@ interface RawInputTerminalProps {
   setInputVal?: (val: string) => void;
   onRegisterExpense: (record: ExpenseRecord) => void;
   onRequestFrictionCheck: (record: ExpenseRecord) => void;
+  expenses?: ExpenseRecord[];
+  onBatchRegister?: (records: ExpenseRecord[]) => void;
 }
 
 const PRESET_COMMANDS = [
@@ -33,6 +35,8 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
   setInputVal: externalSetInputVal,
   onRegisterExpense,
   onRequestFrictionCheck,
+  expenses = [],
+  onBatchRegister,
 }) => {
   const [internalInputVal, setInternalInputVal] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -40,6 +44,19 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
 
   const inputVal = externalInputVal !== undefined ? externalInputVal : internalInputVal;
   const setInputVal = externalSetInputVal || setInternalInputVal;
+
+  // Verificar se cada uma das 3 despesas já foi executada e gravada no banco
+  const isUber17Done = expenses.some(
+    (e) => (e.data === '2026-10-17' || e.data.endsWith('-17')) && Math.abs(e.valor - 6.10) < 0.01
+  );
+  const isAbbey18Done = expenses.some(
+    (e) => (e.data === '2026-10-18' || e.data.endsWith('-18')) && Math.abs(e.valor - 63.00) < 0.01
+  );
+  const isUber18Done = expenses.some(
+    (e) => (e.data === '2026-10-18' || e.data.endsWith('-18')) && Math.abs(e.valor - 30.80) < 0.01
+  );
+
+  const allThreeDone = isUber17Done && isAbbey18Done && isUber18Done;
 
   // Live parsing as user types
   useEffect(() => {
@@ -89,6 +106,61 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
     }
   };
 
+  const handleExecuteAllThree = () => {
+    const toAdd: ExpenseRecord[] = [];
+    const now = Date.now();
+
+    if (!isUber17Done) {
+      toAdd.push({
+        id: `exp_uber17_${now}`,
+        data: '2026-10-17',
+        descricao: 'Uber',
+        valor: 6.10,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: now,
+      });
+    }
+
+    if (!isAbbey18Done) {
+      toAdd.push({
+        id: `exp_abbey18_${now + 1}`,
+        data: '2026-10-18',
+        descricao: 'Abbey',
+        valor: 63.00,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'outros',
+        is_impulsive: false,
+        timestamp: now + 1,
+      });
+    }
+
+    if (!isUber18Done) {
+      toAdd.push({
+        id: `exp_uber18_${now + 2}`,
+        data: '2026-10-18',
+        descricao: 'Uber',
+        valor: 30.80,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: now + 2,
+      });
+    }
+
+    if (toAdd.length > 0) {
+      sound.playSuccess();
+      if (onBatchRegister) {
+        onBatchRegister(toAdd);
+      } else {
+        toAdd.forEach((rec) => onRegisterExpense(rec));
+      }
+      setInputVal('');
+      setParseResult(null);
+    }
+  };
+
   const isCard = parseResult?.tokens?.metodo === 'cartao_credito' || 
                  parseResult?.tokens?.metodo === 'cartao_proprio' || 
                  parseResult?.tokens?.metodo === 'cartao_mae';
@@ -108,52 +180,87 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
         </div>
       </div>
 
-      {/* Painel de Direção Visual: Inserção Rápida de Gastos */}
+      {/* Painel de Direção Visual: Status das Despesas e Atalhos */}
       <div className="bg-[#02131d] border-2 border-[#00f0ff] p-3 mb-3 text-xs shadow-lg shadow-[#00f0ff]/10 animate-in fade-in">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="w-2.5 h-2.5 bg-[#00ff66] animate-pulse" />
+              <span className={`w-2.5 h-2.5 ${allThreeDone ? 'bg-[#00ff66]' : 'bg-[#ffe600] animate-pulse'}`} />
               <span className="text-[#00f0ff] font-extrabold uppercase text-xs tracking-wider">
-                🎯 DIA 18: CARTÃO VIRADO! NOVA FATURA ATIVA
+                🎯 STATUS DOS GASTOS NO CARTÃO (OUTUBRO):
               </span>
               <span className="px-2 py-0.5 bg-[#00ff66]/20 border border-[#00ff66]/50 text-[#00ff66] text-[10px] font-bold">
-                ✓ Compras de hoje vencem só em 23/NOV (~35 dias)
+                {allThreeDone ? '✓ TODOS OS 3 JÁ FORAM EXECUTADOS!' : '⚠️ ITENS ABAIXO SÃO ATALHOS • AINDA NÃO FORAM SALVOS'}
               </span>
             </div>
-            <p className="text-neutral-300 text-[11px] mt-1.5">
-              Digite no campo <strong className="text-[#00f0ff]">sentinela@deck:~$</strong> logo abaixo e aperte <strong className="text-[#ffe600]">ENTER</strong>:
+            <p className="text-neutral-300 text-[11px] mt-1.5 leading-relaxed">
+              {allThreeDone ? (
+                <span className="text-[#00ff66] font-bold">
+                  ✓ As 3 despesas já constam gravadas no seu histórico e nos 4 cards acima!
+                </span>
+              ) : (
+                <span>
+                  Estes botões são <strong>atalhos rápidos</strong>. Para salvá-los, clique em cada um e aperte <strong>ENTER</strong>, ou use o botão <strong>EXECUTAR OS 3 DE UMA VEZ</strong>:
+                </span>
+              )}
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Botão 1: Uber 17/10 */}
             <button
               type="button"
               onClick={() => handleSelectPreset('17/10 uber 6.10 cartao')}
-              className="px-2.5 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              title="Preenche 17/10 Uber R$ 6,10 no cartão"
+              className={`px-2.5 py-1.5 border-2 font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow ${
+                isUber17Done
+                  ? 'bg-[#031d10] border-[#00ff66] text-[#00ff66]'
+                  : 'bg-black border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black'
+              }`}
+              title={isUber17Done ? '✓ Já salvo no banco de dados' : 'Clique para carregar no prompt'}
             >
-              <span>🚗 17/10 UBER: R$ 6,10</span>
+              <span>{isUber17Done ? '✓ 17/10 UBER: R$ 6,10 (SALVO)' : '🚗 17/10 UBER: R$ 6,10'}</span>
             </button>
 
+            {/* Botão 2: Abbey 18/10 */}
             <button
               type="button"
               onClick={() => handleSelectPreset('18/10 abbey 63 cartao')}
-              className="px-2.5 py-1.5 bg-black border-2 border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              title="Preenche 18/10 Abbey R$ 63,00 no cartão"
+              className={`px-2.5 py-1.5 border-2 font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow ${
+                isAbbey18Done
+                  ? 'bg-[#031d10] border-[#00ff66] text-[#00ff66]'
+                  : 'bg-black border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black'
+              }`}
+              title={isAbbey18Done ? '✓ Já salvo no banco de dados' : 'Clique para carregar no prompt'}
             >
               <CreditCard className="w-3.5 h-3.5" />
-              <span>🏛️ 18/10 ABBEY: R$ 63,00</span>
+              <span>{isAbbey18Done ? '✓ 18/10 ABBEY: R$ 63,00 (SALVO)' : '🏛️ 18/10 ABBEY: R$ 63,00'}</span>
             </button>
 
+            {/* Botão 3: Uber 18/10 */}
             <button
               type="button"
               onClick={() => handleSelectPreset('18/10 uber 30.80 cartao')}
-              className="px-2.5 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              title="Preenche 18/10 Uber R$ 30,80 no cartão"
+              className={`px-2.5 py-1.5 border-2 font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow ${
+                isUber18Done
+                  ? 'bg-[#031d10] border-[#00ff66] text-[#00ff66]'
+                  : 'bg-black border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black'
+              }`}
+              title={isUber18Done ? '✓ Já salvo no banco de dados' : 'Clique para carregar no prompt'}
             >
-              <span>🚗 18/10 UBER: R$ 30,80</span>
+              <span>{isUber18Done ? '✓ 18/10 UBER: R$ 30,80 (SALVO)' : '🚗 18/10 UBER: R$ 30,80'}</span>
             </button>
+
+            {/* Botão de Gravação Instantânea dos 3 */}
+            {!allThreeDone && (
+              <button
+                type="button"
+                onClick={handleExecuteAllThree}
+                className="px-3 py-1.5 bg-[#ffe600] hover:bg-[#00ff66] text-black font-black text-xs transition-all cursor-pointer flex items-center gap-1 shadow-md shadow-[#ffe600]/20 uppercase"
+                title="Gravar automaticamente os que ainda não foram executados"
+              >
+                <span>⚡ EXECUTAR OS 3 DE UMA VEZ</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
