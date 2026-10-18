@@ -38,6 +38,9 @@ export class SentinelaParser {
     // 1. Extração de Data
     let extractedDate = defaultDate.toISOString().split('T')[0];
     const dateMatch = text.match(this.DATE_REGEX);
+    const ontemMatch = text.match(/\bontem(?:\s+[aà]\s+noite|\s+de\s+noite|\s+tarde|\s+manh[aã])?\b/i);
+    const hojeMatch = text.match(/\bhoje(?:\s+[aà]\s+noite|\s+de\s+noite|\s+tarde|\s+manh[aã])?\b/i);
+
     if (dateMatch) {
       const day = parseInt(dateMatch[1], 10);
       const month = parseInt(dateMatch[2], 10);
@@ -57,6 +60,16 @@ export class SentinelaParser {
 
       // Remove date match from text
       text = text.replace(dateMatch[0], ' ').trim();
+    } else if (ontemMatch) {
+      const yesterday = new Date(defaultDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const year = yesterday.getFullYear();
+      const formattedMonth = (yesterday.getMonth() + 1).toString().padStart(2, '0');
+      const formattedDay = yesterday.getDate().toString().padStart(2, '0');
+      extractedDate = `${year}-${formattedMonth}-${formattedDay}`;
+      text = text.replace(ontemMatch[0], ' ').trim();
+    } else if (hojeMatch) {
+      text = text.replace(hojeMatch[0], ' ').trim();
     }
 
     // 2. Extração do Método de Pagamento
@@ -96,9 +109,16 @@ export class SentinelaParser {
     text = (text.slice(0, matchIndex) + ' ' + text.slice(matchIndex + matchLen)).trim();
 
     // 4. Limpeza da Descrição
-    let cleanedDescription = text.replace(/\s+/g, ' ').trim();
+    let cleanedDescription = text
+      .replace(/^[-–:;\s]+|[-–:;\s]+$/g, '')
+      .replace(/\s+[-–:]\s+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     if (!cleanedDescription) {
-      cleanedDescription = 'Despesa não identificada';
+      cleanedDescription = extractedMethod === 'cartao_credito' || extractedMethod === 'cartao_proprio' || extractedMethod === 'cartao_mae' 
+        ? 'Gasto no Cartão' 
+        : 'Despesa não identificada';
     }
 
     // Capitaliza primeira letra

@@ -106,9 +106,14 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
 
       {/* TILE 4: FATURA DO CARTÃO / PASSIVO */}
       <div className="border border-[#00f0ff]/70 bg-[#030e14]/90 p-3.5 relative shadow-lg shadow-[#00f0ff]/10">
-        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00f0ff] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
-          <CreditCard className="w-3 h-3 text-black" />
-          <span>Fatura do Cartão (Passivo)</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00f0ff] text-black font-extrabold text-[10px] tracking-wider uppercase">
+            <CreditCard className="w-3 h-3 text-black" />
+            <span>Fatura do Cartão (Passivo)</span>
+          </div>
+          <span className="text-[10px] text-[#00f0ff] font-bold">
+            VIRA: 17 // VENCE: 23
+          </span>
         </div>
 
         <div className="flex items-baseline justify-between mt-1">
@@ -119,8 +124,19 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
         </div>
 
         <div className="mt-3 pt-2 border-t border-[#00f0ff]/30 text-[11px] flex items-center justify-between text-[#00f0ff]/80">
-          <span>Retido: {formatCurrency(metrics.amortizacao_obrigatoria, isHidden)}/mês</span>
-          <span className="text-[10px] text-[#00ff66] font-bold">[PROVISÃO_ATIVA]</span>
+          <span>
+            {(() => {
+              const diaHoje = new Date().getDate();
+              const diaVenc = settings.dia_vencimento_cartao || 23;
+              const diaFech = settings.dia_fechamento_cartao || 17;
+              if (diaHoje === diaFech) return '⚡ Vira Hoje (Dia 17) • Melhores compras!';
+              if (diaHoje > diaFech && diaHoje <= diaVenc) return `⚠️ Vencimento em ${diaVenc - diaHoje}d (Dia ${diaVenc})`;
+              if (diaHoje === diaVenc) return '🚨 Vence Hoje (Dia 23)!';
+              if (diaHoje < diaFech) return `Fecha em ${diaFech - diaHoje}d (Dia ${diaFech})`;
+              return `Próx. fatura vira dia ${diaFech}`;
+            })()}
+          </span>
+          <span className="text-[10px] text-[#00ff66] font-bold">[SALÁRIO DIA 05]</span>
         </div>
       </div>
     </div>

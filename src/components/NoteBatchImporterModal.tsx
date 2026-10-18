@@ -35,24 +35,21 @@ export const NoteBatchImporterModal: React.FC<NoteBatchImporterModalProps> = ({
   currentSelectedMonth,
 }) => {
   const [rawText, setRawText] = useState(EXAMPLE_NOTE);
-  const [targetMonth, setTargetMonth] = useState(currentSelectedMonth || '2026-09');
-  const [defaultMethod, setDefaultMethod] = useState<PaymentMethod>('pix');
+  const [targetMonth, setTargetMonth] = useState(currentSelectedMonth || '2026-10');
+  const [defaultMethod, setDefaultMethod] = useState<PaymentMethod>('cartao_credito');
   const [parseResult, setParseResult] = useState<NoteBatchParseResult | null>(null);
 
   useEffect(() => {
     if (rawText.trim()) {
-      const res = NoteBatchImporter.parseNotes(rawText);
+      const res = NoteBatchImporter.parseNotes(rawText, 2026, defaultMethod);
       setParseResult(res);
       if (res.mesSugerido) {
         setTargetMonth(res.mesSugerido);
       }
-      if (res.metodoSugerido) {
-        setDefaultMethod(res.metodoSugerido);
-      }
     } else {
       setParseResult(null);
     }
-  }, [rawText]);
+  }, [rawText, defaultMethod]);
 
   if (!isOpen) return null;
 
@@ -75,6 +72,13 @@ export const NoteBatchImporterModal: React.FC<NoteBatchImporterModalProps> = ({
 
   const handleLoadExample = () => {
     setRawText(EXAMPLE_NOTE);
+    sound.playTick();
+  };
+
+  const handleLoadOctoberCard = () => {
+    setRawText(`Outubro - Cartão\n\n17/10 - Uber - 6,10\n18/10 - Abbey - 63\n18/10 - Uber - 30,80`);
+    setDefaultMethod('cartao_credito');
+    setTargetMonth('2026-10');
     sound.playTick();
   };
 
@@ -157,12 +161,20 @@ export const NoteBatchImporterModal: React.FC<NoteBatchImporterModalProps> = ({
               </div>
             </div>
 
-            <div className="flex items-end justify-end gap-2">
+            <div className="flex items-end justify-end gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleLoadOctoberCard}
+                className="px-2.5 py-1.5 bg-[#00f0ff]/10 border border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black text-[10px] font-bold uppercase transition-all"
+                title="Carregar lote do cartão: Uber 17/10, Abbey 18/10, Uber 18/10"
+              >
+                + Carregar Cartão Outubro (3 itens)
+              </button>
               <button
                 type="button"
                 onClick={handleLoadExample}
                 className="px-2.5 py-1.5 bg-neutral-900 border border-neutral-700 hover:text-white text-[10px] font-bold uppercase transition-all"
-                title="Carregar o exemplo do bloco de notas enviado"
+                title="Carregar o exemplo do bloco de notas de Setembro"
               >
                 Exemplo Setembro
               </button>

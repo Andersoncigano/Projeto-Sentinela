@@ -37,7 +37,11 @@ const MESES_MAP: Record<string, number> = {
 };
 
 export class NoteBatchImporter {
-  public static parseNotes(rawText: string, currentYear: number = 2026): NoteBatchParseResult {
+  public static parseNotes(
+    rawText: string, 
+    currentYear: number = 2026,
+    overrideMethod?: PaymentMethod
+  ): NoteBatchParseResult {
     const lines = rawText
       .split('\n')
       .map(l => l.trim())
@@ -45,7 +49,7 @@ export class NoteBatchImporter {
 
     let detectedMonthNum = new Date().getMonth() + 1;
     let detectedYear = currentYear;
-    let defaultMethod: PaymentMethod = 'pix';
+    let defaultMethod: PaymentMethod = overrideMethod || 'pix';
 
     // 1. Detectar cabeçalho geral (ex: "Setembro - Pix", "Outubro - Cartão")
     for (const line of lines) {

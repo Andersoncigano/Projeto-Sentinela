@@ -121,11 +121,16 @@ export const FrictionModal: React.FC<FrictionModalProps> = ({
             <div className="bg-black border border-[#00f0ff]/70 p-3 text-xs text-[#00f0ff] flex items-start gap-3">
               <CreditCard className="w-5 h-5 text-[#00f0ff] flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-[#00f0ff] uppercase">
-                  [ COMPROMISSO DE FATURA: CARTÃO DE CRÉDITO ]
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-[#00f0ff] uppercase">
+                    [ COMPROMISSO DE FATURA: CARTÃO DE CRÉDITO ]
+                  </p>
+                  <span className="text-[10px] bg-[#00f0ff]/20 text-[#00f0ff] px-1.5 py-0.2 font-bold">
+                    VIRA 17 // VENCE 23
+                  </span>
+                </div>
                 <p className="text-[11px] text-neutral-300 leading-relaxed">
-                  Este valor será acumulado na sua fatura do cartão que você precisará pagar no vencimento. Certifique-se de que haverá saldo para honrar o valor total da fatura.
+                  Este valor será acumulado na fatura do cartão. A fatura <strong>vira no dia 17</strong> e tem <strong>prazo fatal até dia 23</strong>. Como seu salário cai no dia 05, certifique-se de manter o saldo reservado para quitar essa fatura em dia.
                 </p>
               </div>
             </div>

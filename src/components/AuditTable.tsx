@@ -166,18 +166,44 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                       const isCard = item.metodo_pagamento === 'cartao_credito' || 
                                      item.metodo_pagamento === 'cartao_proprio' || 
                                      item.metodo_pagamento === 'cartao_mae';
+                      if (!isCard) {
+                        return (
+                          <span
+                            className={`px-1.5 py-0.2 text-[9px] font-black uppercase border ${
+                              item.metodo_pagamento === 'pix'
+                                ? 'border-[#00ff66] text-[#00ff66] bg-black'
+                                : 'border-neutral-700 text-neutral-400 bg-black'
+                            }`}
+                          >
+                            {item.metodo_pagamento.replace('_', ' ')}
+                          </span>
+                        );
+                      }
+
+                      // Se o gasto foi no dia 17 ou posterior, já entra na nova fatura (Novembro / 23)
+                      const itemDay = parseInt(item.data.split('-')[2] || '0', 10);
+                      const isNovaFatura = itemDay >= 17;
+
                       return (
-                        <span
-                          className={`px-1.5 py-0.2 text-[9px] font-black uppercase border ${
-                            isCard
-                              ? 'border-[#00f0ff] text-[#00f0ff] bg-black'
-                              : item.metodo_pagamento === 'pix'
-                              ? 'border-[#00ff66] text-[#00ff66] bg-black'
-                              : 'border-neutral-700 text-neutral-400 bg-black'
-                          }`}
-                        >
-                          {isCard ? 'CARTÃO CRÉDITO' : item.metodo_pagamento.replace('_', ' ')}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="px-1.5 py-0.2 text-[9px] font-black uppercase border border-[#00f0ff] text-[#00f0ff] bg-black">
+                            CARTÃO CRÉDITO
+                          </span>
+                          <span
+                            className={`px-1 py-0.2 text-[8px] font-bold uppercase border ${
+                              isNovaFatura
+                                ? 'border-[#00ff66]/50 bg-[#00ff66]/10 text-[#00ff66]'
+                                : 'border-[#ffe600]/50 bg-[#ffe600]/10 text-[#ffe600]'
+                            }`}
+                            title={
+                              isNovaFatura 
+                                ? 'Gasto no dia 17 ou posterior: entra na fatura que vence em 23 de Novembro' 
+                                : 'Gasto anterior ao dia 17: entra na fatura fechada que vence em 23 de Outubro'
+                            }
+                          >
+                            {isNovaFatura ? 'FATURA NOV (VENCE 23/11)' : 'FATURA OUT (VENCE 23/10)'}
+                          </span>
+                        </div>
                       );
                     })()}
                   </td>

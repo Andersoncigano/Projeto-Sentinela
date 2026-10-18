@@ -108,38 +108,51 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
         </div>
       </div>
 
-      {/* Painel de Direção Visual: Gastos de Hoje no Cartão */}
+      {/* Painel de Direção Visual: Inserção Rápida de Gastos */}
       <div className="bg-[#02131d] border-2 border-[#00f0ff] p-3 mb-3 text-xs shadow-lg shadow-[#00f0ff]/10 animate-in fade-in">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#00f0ff] animate-ping" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="w-2.5 h-2.5 bg-[#00ff66] animate-pulse" />
               <span className="text-[#00f0ff] font-extrabold uppercase text-xs tracking-wider">
-                🎯 ONDE INSERIR SEUS GASTOS DE HOJE NO CARTÃO:
+                🎯 DIA 18: CARTÃO VIRADO! NOVA FATURA ATIVA
+              </span>
+              <span className="px-2 py-0.5 bg-[#00ff66]/20 border border-[#00ff66]/50 text-[#00ff66] text-[10px] font-bold">
+                ✓ Compras de hoje vencem só em 23/NOV (~35 dias)
               </span>
             </div>
-            <p className="text-neutral-300 text-[11px] mt-1">
-              Digite no campo <strong className="text-[#00f0ff]">sentinela@deck:~$</strong> logo abaixo e aperte <strong className="text-[#ffe600]">ENTER</strong>, ou clique direto nos atalhos:
+            <p className="text-neutral-300 text-[11px] mt-1.5">
+              Digite no campo <strong className="text-[#00f0ff]">sentinela@deck:~$</strong> logo abaixo e aperte <strong className="text-[#ffe600]">ENTER</strong>:
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => handleSelectPreset('uber 16.00 cartao')}
-              className="px-3 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              title="Preenche e prepara o gasto do Uber R$ 16 no cartão"
+              onClick={() => handleSelectPreset('17/10 uber 6.10 cartao')}
+              className="px-2.5 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              title="Preenche 17/10 Uber R$ 6,10 no cartão"
             >
-              <span>🚗 1º UBER: R$ 16,00 (CARTÃO)</span>
+              <span>🚗 17/10 UBER: R$ 6,10</span>
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectPreset('chopp 22.00 cartao')}
-              className="px-3 py-1.5 bg-black border-2 border-[#ffe600] text-[#ffe600] hover:bg-[#ffe600] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
-              title="Preenche e prepara o gasto do Chopp R$ 22 no cartão (com fricção comportamental)"
+              onClick={() => handleSelectPreset('18/10 abbey 63 cartao')}
+              className="px-2.5 py-1.5 bg-black border-2 border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              title="Preenche 18/10 Abbey R$ 63,00 no cartão"
             >
-              <span>🍺 2º CHOPP: R$ 22,00 (CARTÃO)</span>
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>🏛️ 18/10 ABBEY: R$ 63,00</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('18/10 uber 30.80 cartao')}
+              className="px-2.5 py-1.5 bg-black border-2 border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow"
+              title="Preenche 18/10 Uber R$ 30,80 no cartão"
+            >
+              <span>🚗 18/10 UBER: R$ 30,80</span>
             </button>
           </div>
         </div>

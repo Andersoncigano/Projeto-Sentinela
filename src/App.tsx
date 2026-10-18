@@ -39,6 +39,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   custos_fixos_essenciais: 250.0,
   meta_poupanca_minima: 50.0,
   dia_recebimento: 5,
+  dia_fechamento_cartao: 17, // Vira dia 17
+  dia_vencimento_cartao: 23, // Vence dia 23
   rescisao_prevista: {
     data_prevista: '2026-10-30',
     status: 'aguardando_calculo',

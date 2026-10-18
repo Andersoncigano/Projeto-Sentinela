@@ -108,6 +108,10 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
           <span className="text-neutral-700">|</span>
           <span className="text-[#00f0ff]">
+            CARTÃO: VIRA DIA 17 // VENCE DIA 23
+          </span>
+          <span className="text-neutral-700">|</span>
+          <span className="text-[#00f0ff]">
             RESCISÃO: PREV. DIA 30
           </span>
           <span className="text-neutral-700">|</span>

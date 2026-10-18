@@ -151,9 +151,14 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
               <CreditCard className="w-3 h-3 text-black" />
               <span>ESCALA 2: CARTÃO DE CRÉDITO</span>
             </span>
-            <span className="text-[10px] text-[#00f0ff]">
-              {cartaoExpenses.length} lançamentos
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="px-1.5 py-0.2 bg-[#00f0ff]/20 border border-[#00f0ff]/50 text-[#00f0ff] text-[9px] font-bold">
+                VIRA DIA 17 • VENCE DIA 23
+              </span>
+              <span className="text-[10px] text-[#00f0ff]">
+                {cartaoExpenses.length} lançamentos
+              </span>
+            </div>
           </div>
 
           <div className="my-2">
@@ -161,7 +166,7 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
               {formatCurrency(totalCartao, isHidden)}
             </span>
             <span className="text-[10px] text-neutral-400 block mt-0.5">
-              Fatura acumulada para quitação no vencimento
+              Fatura acumulada para quitação até dia 23
             </span>
           </div>
 
@@ -201,22 +206,66 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
         </div>
       </div>
 
-      {/* Grid: Ciclo Salarial (Dia 5) & Previsão de Rescisão (Dia 30) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-        {/* Banner: Ciclo do Salário no Dia 5 */}
+      {/* Grid Triplo de Inteligência Cronológica: Salário (05), Cartão (17/23), Rescisão (30) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        {/* Banner 1: Ciclo do Salário no Dia 5 */}
         <div className="p-3 bg-black border border-[#ffe600]/40 flex items-start gap-2.5">
           <Calendar className="w-4 h-4 text-[#ffe600] flex-shrink-0 mt-0.5" />
           <div className="space-y-1 text-[11px]">
             <p className="font-bold text-[#ffe600] uppercase">
-              // CICLO SALARIAL: RECEBIMENTO TODO DIA 05
+              // SALÁRIO: DIA 05
             </p>
-            <p className="text-neutral-300 text-[10px]">
-              Seu benefício/salário (R$ 850,00) entra sempre no <strong>dia 05</strong> (turno manhã/tarde).
+            <p className="text-neutral-300 text-[10px] leading-relaxed">
+              R$ 850,00 entra sempre no <strong>dia 05</strong>.
               {diasAteDia5 === 0 ? (
-                <span className="text-[#00ff66] font-bold ml-1">HOJE É DIA DE PAGAMENTO!</span>
+                <span className="text-[#00ff66] font-bold block mt-0.5">HOJE É DIA DE PAGAMENTO!</span>
               ) : (
-                <span className="text-[#ffe600] font-bold ml-1">Faltam {diasAteDia5} dias para o próximo crédito.</span>
+                <span className="text-[#ffe600] font-bold block mt-0.5">Faltam {diasAteDia5} dias para o crédito.</span>
               )}
+            </p>
+          </div>
+        </div>
+
+        {/* Banner 2: Ciclo do Cartão: Vira dia 17 / Vence dia 23 */}
+        <div className="p-3 bg-black border border-[#00f0ff]/40 flex items-start gap-2.5">
+          <CreditCard className="w-4 h-4 text-[#00f0ff] flex-shrink-0 mt-0.5" />
+          <div className="space-y-1 text-[11px]">
+            <p className="font-bold text-[#00f0ff] uppercase">
+              // CARTÃO: VIRA DIA 17 // VENCE DIA 23
+            </p>
+            <p className="text-neutral-300 text-[10px] leading-relaxed">
+              {(() => {
+                const diaHoje = currentDay;
+                const diaVenc = settings.dia_vencimento_cartao || 23;
+                const diaFech = settings.dia_fechamento_cartao || 17;
+
+                if (diaHoje === diaFech) {
+                  return (
+                    <span className="text-[#00f0ff] font-bold">
+                      ⚡ <strong>HOJE É O DIA DA VIRADA (17)!</strong> Compras feitas agora jogam o vencimento para o dia 23 do próximo mês (~36 dias).
+                    </span>
+                  );
+                } else if (diaHoje > diaFech && diaHoje <= diaVenc) {
+                  const diasFaltam = diaVenc - diaHoje;
+                  return (
+                    <span>
+                      Fatura fechada no dia 17. <strong className="text-[#ffe600]">Prazo máximo de pagamento em {diasFaltam} {diasFaltam === 1 ? 'dia' : 'dias'} (Dia 23)</strong>.
+                    </span>
+                  );
+                } else if (diaHoje === diaVenc) {
+                  return (
+                    <span className="text-[#ff0055] font-bold">
+                      🚨 HOJE É O VENCIMENTO DA FATURA (DIA 23)! Realize o pagamento para evitar encargos.
+                    </span>
+                  );
+                } else {
+                  return (
+                    <span>
+                      Fatura aberta. Próximo fechamento no dia 17. Pagamento programado para dia 23.
+                    </span>
+                  );
+                }
+              })()}
             </p>
           </div>
         </div>

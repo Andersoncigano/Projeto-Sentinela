@@ -37,6 +37,8 @@ export interface SystemSettings {
   custos_fixos_essenciais: number;
   meta_poupanca_minima: number;
   dia_recebimento?: number; // Dia 5
+  dia_fechamento_cartao?: number; // Dia 17 (Virada da fatura)
+  dia_vencimento_cartao?: number; // Dia 23 (Vencimento da fatura)
   rescisao_prevista?: {
     data_prevista: string; // ex: '2026-10-30'
     valor?: number;
