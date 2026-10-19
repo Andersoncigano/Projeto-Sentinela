@@ -56,7 +56,13 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
   );
   const totalCartao = cartaoExpenses.reduce((acc, e) => acc + e.valor, 0);
 
-  const totalGeral = totalVista + totalCartao;
+  // Escala 3: Verba Rescisória (Pix Rescisão)
+  const rescisaoExpenses = monthExpenses.filter(e => e.metodo_pagamento === 'pix_rescisao');
+  const totalRescisaoGasto = rescisaoExpenses.reduce((acc, e) => acc + e.valor, 0);
+  const valorHomologadoRescisao = settings.rescisao_prevista?.valor || 0;
+  const saldoRestanteRescisao = Math.max(0, valorHomologadoRescisao - totalRescisaoGasto);
+
+  const totalGeral = totalVista + totalCartao + totalRescisaoGasto;
   const percVista = totalGeral > 0 ? (totalVista / totalGeral) * 100 : 50;
   const percCartao = totalGeral > 0 ? (totalCartao / totalGeral) * 100 : 50;
 
@@ -270,25 +276,33 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
           </div>
         </div>
 
-        {/* Banner: Verba Rescisória Prevista (Dia 30) */}
-        <div className="p-3 bg-black border border-[#00f0ff]/40 flex items-start justify-between gap-2.5">
+        {/* Banner: Verba Rescisória Prevista (Dia 30 - Cálculo Sexta-feira) */}
+        <div className="p-3 bg-black border border-[#c084fc]/50 flex items-start justify-between gap-2.5">
           <div className="flex items-start gap-2.5">
-            <Briefcase className="w-4 h-4 text-[#00f0ff] flex-shrink-0 mt-0.5" />
+            <Briefcase className="w-4 h-4 text-[#c084fc] flex-shrink-0 mt-0.5" />
             <div className="space-y-1 text-[11px]">
-              <p className="font-bold text-[#00f0ff] uppercase">
-                // VERBA RESCISÓRIA: PREVISÃO DIA 30
+              <p className="font-bold text-[#c084fc] uppercase">
+                // VERBA RESCISÓRIA: RECEBIMENTO DIA 30 (CÁLCULO NA SEXTA)
               </p>
-              <p className="text-neutral-300 text-[10px]">
-                {settings.rescisao_prevista?.valor ? (
-                  <span>
-                    Valor homologado: <strong className="text-[#00ff66]">{formatCurrency(settings.rescisao_prevista.valor, isHidden)}</strong>
-                  </span>
+              <div className="text-neutral-300 text-[10px] space-y-1">
+                {valorHomologadoRescisao > 0 ? (
+                  <div>
+                    <span className="block">
+                      Homologado: <strong className="text-[#00ff66]">{formatCurrency(valorHomologadoRescisao, isHidden)}</strong>
+                      {totalRescisaoGasto > 0 && (
+                        <span className="text-neutral-400"> • Gasto com 'pix rescisão': <strong className="text-[#c084fc]">{formatCurrency(totalRescisaoGasto, isHidden)}</strong></span>
+                      )}
+                    </span>
+                    <span className="block text-[#00f0ff] font-bold mt-0.5">
+                      Saldo livre restante da rescisão: {formatCurrency(saldoRestanteRescisao, isHidden)}
+                    </span>
+                  </div>
                 ) : (
-                  <span>
-                    Aguardando conferência do valor da rescisão no dia 30 para calibrar aportes e reserva.
-                  </span>
+                  <p className="leading-relaxed">
+                    Aguardando conferência do valor líquido na <strong>sexta-feira</strong> para homologação. Gastos com <code className="text-[#c084fc] bg-black px-1 border border-[#c084fc]/40">pix rescisão</code> são abatidos daqui e <strong>NÃO</strong> reduzem seus R$ 200,00 do salário mensal!
+                  </p>
                 )}
-              </p>
+              </div>
             </div>
           </div>
 

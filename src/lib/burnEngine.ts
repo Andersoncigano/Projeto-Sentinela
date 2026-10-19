@@ -39,11 +39,20 @@ export class SentinelaBurnEngine {
         settings.meta_poupanca_minima
     );
 
-    // 3. Gastos do mês corrente
+    // 3. Gastos do mês corrente que consomem o Saldo em Dinheiro / Pix (Escala 1: À Vista)
+    // - Compras no Cartão de Crédito vão para a Fatura do Cartão (Passivo com vencimento dia 23)
+    // - Compras com 'pix_rescisao' saem da Verba Rescisória (Dia 30)
     const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
     const monthlyExpenses = expenses.filter(e => e.data.startsWith(currentMonthPrefix));
 
-    const totalGastoMes = monthlyExpenses.reduce((acc, e) => acc + e.valor, 0);
+    // Gastos que saem da conta corrente / dinheiro vivo na hora:
+    const vistaExpenses = monthlyExpenses.filter(e => 
+      e.metodo_pagamento === 'pix' || 
+      e.metodo_pagamento === 'dinheiro' || 
+      e.metodo_pagamento === 'debito'
+    );
+
+    const totalGastoMes = vistaExpenses.reduce((acc, e) => acc + e.valor, 0);
     const totalGastoImpulsivo = monthlyExpenses
       .filter(e => e.is_impulsive)
       .reduce((acc, e) => acc + e.valor, 0);

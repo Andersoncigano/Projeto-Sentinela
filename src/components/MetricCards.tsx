@@ -1,12 +1,14 @@
 import React from 'react';
 import { Flame, Clock, CreditCard, Target, TrendingDown } from 'lucide-react';
-import { BurnRateMetrics, DebtRecord, SystemSettings } from '../types/sentinela';
+import { BurnRateMetrics, DebtRecord, SystemSettings, ExpenseRecord } from '../types/sentinela';
 import { formatCurrency } from '../lib/format';
 
 interface MetricCardsProps {
   metrics: BurnRateMetrics;
   settings: SystemSettings;
   debts: DebtRecord[];
+  expenses?: ExpenseRecord[];
+  selectedMonth?: string;
   showValues: boolean;
 }
 
@@ -14,13 +16,26 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
   metrics, 
   settings, 
   debts, 
+  expenses = [],
+  selectedMonth,
   showValues = true 
 }) => {
   const isHidden = !showValues;
-  const totalDividasRestantes = debts.reduce(
-    (acc, d) => acc + Math.max(0, d.valor_total - d.valor_pago),
-    0
+  
+  // Total da Fatura do Cartão: Faturas cadastradas + compras do cartão no mês
+  const monthPrefix = selectedMonth || new Date().toISOString().substring(0, 7);
+  const cartaoExpensesMes = expenses.filter(
+    (e) =>
+      e.data.startsWith(monthPrefix) &&
+      (e.metodo_pagamento === 'cartao_credito' ||
+        e.metodo_pagamento === 'cartao_proprio' ||
+        e.metodo_pagamento === 'cartao_mae')
   );
+  const totalCartaoCompras = cartaoExpensesMes.reduce((acc, e) => acc + e.valor, 0);
+
+  const totalDividasRestantes =
+    debts.reduce((acc, d) => acc + Math.max(0, d.valor_total - d.valor_pago), 0) +
+    totalCartaoCompras;
 
   const deltaTeto = metrics.teto_diario_atual - metrics.teto_diario_ideal;
 
@@ -54,7 +69,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
       <div className="border border-[#ffe600]/70 bg-[#0f0e03]/90 p-3.5 relative shadow-lg shadow-[#ffe600]/10">
         <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#ffe600] text-black font-extrabold text-[10px] tracking-wider uppercase mb-2">
           <TrendingDown className="w-3 h-3 text-black" />
-          <span>Saldo Livre Restante</span>
+          <span>Saldo Livre (Pix / À Vista)</span>
         </div>
 
         <div className="flex items-baseline justify-between mt-1">
@@ -62,7 +77,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             {formatCurrency(metrics.saldo_restante, isHidden)}
           </span>
           <span className="text-[10px] text-neutral-400">
-            de {formatCurrency(metrics.saldo_disponivel_inicial, isHidden)}
+            de {formatCurrency(metrics.saldo_disponivel_inicial, isHidden)} livre
           </span>
         </div>
 
@@ -75,8 +90,8 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
         </div>
 
         <div className="mt-2 text-[10px] text-neutral-400 flex justify-between">
-          <span>QUEIMADO: {metrics.burn_rate_percent.toFixed(0)}%</span>
-          <span className="text-[#ffe600]">{isHidden ? 'PROTEGIDO' : 'DISPONÍVEL'}</span>
+          <span>PIX USADO: {metrics.burn_rate_percent.toFixed(0)}%</span>
+          <span className="text-[#ffe600]">{isHidden ? 'PROTEGIDO' : 'SALÁRIO LIVRE'}</span>
         </div>
       </div>
 

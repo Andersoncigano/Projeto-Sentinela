@@ -36,15 +36,15 @@ const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
   reserva_emergencia: 1400.0,
   horas_trabalho_mes: 88.0, // PCD Meio Período (~4h/dia * 22 dias)
-  custos_fixos_essenciais: 250.0,
-  meta_poupanca_minima: 50.0,
+  custos_fixos_essenciais: 650.0, // Obrigações: luz, remédio, internet e banco (~R$ 650)
+  meta_poupanca_minima: 0.0, // Deixa exatamente R$ 200,00 livres da renda ordinária
   dia_recebimento: 5,
   dia_fechamento_cartao: 17, // Vira dia 17
   dia_vencimento_cartao: 23, // Vence dia 23
   rescisao_prevista: {
     data_prevista: '2026-10-30',
     status: 'aguardando_calculo',
-    observacao: 'Previsão de rescisão a receber no dia 30 - verificar valor homologado',
+    observacao: 'Previsão de rescisão a receber no dia 30 - valor líquido a calcular na sexta-feira',
   },
 };
 
@@ -68,7 +68,23 @@ const getInitialExpenses = (): ExpenseRecord[] => {
 export default function App() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const saved = localStorage.getItem('sentinela_settings');
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Atualiza para o orçamento real informado pelo usuário:
+        // Salário: R$ 850, Obrigações fixas (luz, remédio, internet, dívida banco): R$ 650 -> Saldo Livre: R$ 200,00
+        if (parsed.custos_fixos_essenciais !== 650 || parsed.renda_mensal !== 850) {
+          parsed.renda_mensal = 850.0;
+          parsed.custos_fixos_essenciais = 650.0;
+          parsed.meta_poupanca_minima = 0.0;
+          localStorage.setItem('sentinela_settings', JSON.stringify(parsed));
+        }
+        return parsed;
+      } catch {
+        return DEFAULT_SETTINGS;
+      }
+    }
+    return DEFAULT_SETTINGS;
   });
 
   const [debts, setDebts] = useState<DebtRecord[]>(() => {
@@ -106,6 +122,18 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sentinela_settings', JSON.stringify(settings));
   }, [settings]);
+
+  // Garante que o orçamento real do usuário esteja ativo (Renda 850 - Obrigações 650 = Saldo Livre 200)
+  useEffect(() => {
+    if (settings.custos_fixos_essenciais !== 650 || settings.renda_mensal !== 850) {
+      setSettings((prev) => ({
+        ...prev,
+        renda_mensal: 850.0,
+        custos_fixos_essenciais: 650.0,
+        meta_poupanca_minima: 0.0,
+      }));
+    }
+  }, [settings.custos_fixos_essenciais, settings.renda_mensal]);
 
   useEffect(() => {
     localStorage.setItem('sentinela_debts', JSON.stringify(debts));
@@ -375,6 +403,8 @@ export default function App() {
               metrics={metrics} 
               settings={settings} 
               debts={debts} 
+              expenses={expenses}
+              selectedMonth={selectedMonth}
               showValues={showValues} 
             />
 
@@ -409,11 +439,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Audit & Transaction Ledger com filtro por mês selecionado */}
+            {/* Audit & Transaction Ledger com filtro por mês selecionado e modo tela cheia */}
             <AuditTable
               expenses={expenses}
               onDeleteExpense={handleDeleteExpense}
               selectedMonth={selectedMonth}
+              showValues={showValues}
             />
           </div>
         )}

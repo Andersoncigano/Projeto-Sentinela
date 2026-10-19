@@ -28,6 +28,10 @@ ESSENTIAL_KEYWORDS = {
 }
 
 PAYMENT_METHOD_ALIASES = {
+    "pix rescisao": "pix_rescisao",
+    "pix rescisão": "pix_rescisao",
+    "rescisao": "pix_rescisao",
+    "rescisão": "pix_rescisao",
     "pix": "pix",
     "px": "pix",
     "cartao mae": "cartao_mae",

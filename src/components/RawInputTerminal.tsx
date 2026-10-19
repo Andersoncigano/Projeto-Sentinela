@@ -7,7 +7,10 @@ import {
   Command, 
   X, 
   RotateCcw,
-  CreditCard
+  CreditCard,
+  Layers,
+  Briefcase,
+  Zap
 } from 'lucide-react';
 import { SentinelaParser } from '../lib/parser';
 import { ParseResult, ExpenseRecord } from '../types/sentinela';
@@ -28,6 +31,7 @@ const PRESET_COMMANDS = [
   { key: 'F3', label: 'LANCHE 45 PIX', cmd: 'lanche 45 pix', type: 'impulse' },
   { key: 'F4', label: 'REMÉDIO FARMÁCIA', cmd: 'remedio 32.00 farmacia dinheiro', type: 'safe' },
   { key: 'F5', label: 'ÔNIBUS 5 DINHEIRO', cmd: 'onibus 5.00 dinheiro', type: 'safe' },
+  { key: 'F6', label: 'COMPRAS 150 PIX RESCISÃO', cmd: 'compras 150 pix rescisao', type: 'rescisao' },
 ];
 
 export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
@@ -101,6 +105,22 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
   const handleSelectPreset = (cmd: string) => {
     setInputVal(cmd);
     sound.playTick();
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const handleAppendMethod = (methodSuffix: string) => {
+    sound.playTick();
+    if (!inputVal.trim()) {
+      setInputVal(`${methodSuffix} `);
+    } else {
+      // Remove any previously written method alias and replace with chosen one
+      const cleaned = inputVal
+        .replace(/\b(pix\s*[/]?\s*rescis[aã]o|rescis[aã]o\s*[/]?\s*pix|rescis[aã]o|pix\s*[/]?\s*sal[aá]rio|sal[aá]rio\s*[/]?\s*pix|sobra\s*(?:do\s*)?sal[aá]rio|cart[aã]o(?:\s*mae)?|cartao|pix)\b/gi, '')
+        .trim();
+      setInputVal(`${cleaned} ${methodSuffix}`.trim());
+    }
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -280,6 +300,8 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                 ? 'bg-[#180309] border-[#ff0055] text-[#ff3377] hover:bg-[#ff0055] hover:text-black'
                 : preset.type === 'impulse'
                 ? 'bg-[#161202] border-[#ffe600] text-[#ffe600] hover:bg-[#ffe600] hover:text-black'
+                : preset.type === 'rescisao'
+                ? 'bg-[#170a25] border-[#c084fc] text-[#c084fc] hover:bg-[#c084fc] hover:text-black'
                 : 'bg-[#021308] border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black'
             }`}
           >
@@ -289,6 +311,40 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
             <span>{preset.label}</span>
           </button>
         ))}
+      </div>
+
+      {/* Seletor Rápido de Medida / Origem do Recurso */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 p-2 bg-[#020710] border border-neutral-800 text-xs">
+        <span className="text-[10px] text-neutral-400 font-extrabold uppercase flex items-center gap-1.5 flex-shrink-0">
+          <Layers className="w-3.5 h-3.5 text-[#00f0ff]" />
+          ORIGEM DO GASTO (CLIQUE PARA ANEXAR):
+        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleAppendMethod('pix')}
+            className="px-2 py-1 bg-[#011a0c] border border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Gasto comum do dia a dia: consome a sobra dos R$ 200 do seu salário"
+          >
+            <span>🟢 1. PIX / SALÁRIO (SOBRA R$ 200)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAppendMethod('pix rescisao')}
+            className="px-2 py-1 bg-[#170a25] border border-[#c084fc] text-[#c084fc] hover:bg-[#c084fc] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Gasto com a rescisão: consome a verba rescisória e NÃO mexe nos seus R$ 200"
+          >
+            <span>🟣 2. PIX RESCISÃO (DIA 30)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAppendMethod('cartao')}
+            className="px-2 py-1 bg-[#031522] border border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Gasto no cartão de crédito da mãe: vai para a fatura com vencimento dia 23"
+          >
+            <span>🔵 3. CARTÃO (VIRA 17 / VENCE 23)</span>
+          </button>
+        </div>
       </div>
 
       {/* Terminal Input Prompt */}
@@ -308,7 +364,7 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                 handleClear();
               }
             }}
-            placeholder="Digite: 'uber 16 cartao' ou 'chopp 22 cartao' e aperte ENTER..."
+            placeholder="Ex: 'uber 30.80 cartao', 'farmacia 25 pix' ou 'compras 120 pix rescisao' e aperte ENTER..."
             className="w-full bg-transparent text-[#e0f2fe] placeholder:text-neutral-500 focus:outline-none text-xs font-mono py-1.5"
           />
 
@@ -398,10 +454,26 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                     R$ {parseResult.tokens.valor.toFixed(2)}
                   </span>
                 </div>
-                <div className="p-2 bg-black border border-[#00f0ff]/40">
-                  <span className="text-[9px] text-[#00f0ff] block uppercase">[MÉTODO]</span>
-                  <span className="font-bold uppercase text-[11px] text-[#00f0ff]">
-                    {isCard ? 'CARTÃO DE CRÉDITO' : parseResult.tokens.metodo.replace('_', ' ')}
+                <div className={`p-2 bg-black border ${
+                  parseResult.tokens.metodo === 'pix_rescisao'
+                    ? 'border-[#c084fc]'
+                    : isCard
+                    ? 'border-[#00f0ff]'
+                    : 'border-[#00ff66]'
+                }`}>
+                  <span className="text-[9px] text-neutral-400 block uppercase">[MEDIDA / ORIGEM]</span>
+                  <span className={`font-black uppercase text-[11px] ${
+                    parseResult.tokens.metodo === 'pix_rescisao'
+                      ? 'text-[#c084fc]'
+                      : isCard
+                      ? 'text-[#00f0ff]'
+                      : 'text-[#00ff66]'
+                  }`}>
+                    {parseResult.tokens.metodo === 'pix_rescisao'
+                      ? '🟣 PIX RESCISÃO'
+                      : isCard
+                      ? '🔵 CARTÃO CRÉDITO'
+                      : '🟢 PIX SALÁRIO'}
                   </span>
                 </div>
                 <div className="p-2 bg-black border border-neutral-800 col-span-2 sm:col-span-1">
@@ -412,12 +484,31 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
                 </div>
               </div>
 
+              {/* Informação Dinâmica de Impacto Financeiro */}
+              {parseResult.tokens.metodo === 'pix_rescisao' && (
+                <div className="mt-2 text-xs bg-[#170a25] border border-[#c084fc]/50 p-2 text-[#c084fc] flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-[#c084fc] flex-shrink-0" />
+                  <span>
+                    <strong>VERBA RESCISÓRIA (DIA 30):</strong> Este valor sairá da sua rescisão. <strong>NÃO</strong> desconta dos R$ 200,00 de saldo livre do seu salário!
+                  </span>
+                </div>
+              )}
+
+              {parseResult.tokens.metodo === 'pix' && (
+                <div className="mt-2 text-xs bg-[#011a0c] border border-[#00ff66]/50 p-2 text-[#00ff66] flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#00ff66] flex-shrink-0" />
+                  <span>
+                    <strong>SALDO LIVRE DO SALÁRIO:</strong> Descontará dos seus <strong>R$ 200,00</strong> que sobraram das contas do mês e atualizará seu Teto Diário.
+                  </span>
+                </div>
+              )}
+
               {isCard && (
                 <div className="mt-2 text-xs bg-[#031118] border border-[#00f0ff]/50 p-2 text-[#00f0ff] flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-[#00f0ff] flex-shrink-0" />
                     <span>
-                      <strong>FATURA DO CARTÃO DE CRÉDITO:</strong> O valor entrará na fatura mensal do cartão que você pagará no vencimento.
+                      <strong>FATURA DO CARTÃO (PASSIVO):</strong> Entra na fatura que vence dia 23, sem tirar dinheiro do seu bolso hoje.
                     </span>
                   </span>
                 </div>
