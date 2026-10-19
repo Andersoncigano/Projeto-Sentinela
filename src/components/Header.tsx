@@ -12,7 +12,8 @@ import {
   Tv,
   Cpu,
   Eye,
-  EyeOff
+  EyeOff,
+  Database
 } from 'lucide-react';
 import { BurnRateMetrics, SystemSettings } from '../types/sentinela';
 import { sound } from '../lib/sound';
@@ -21,8 +22,8 @@ import { formatCurrency } from '../lib/format';
 interface HeaderProps {
   metrics: BurnRateMetrics;
   settings: SystemSettings;
-  activeTab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual';
-  setActiveTab: (tab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual') => void;
+  activeTab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table';
+  setActiveTab: (tab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table') => void;
   isMuted: boolean;
   setIsMuted: (muted: boolean) => void;
   crtEnabled: boolean;
@@ -274,6 +275,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>[ 04 // NUDGE_THEORY_MANUAL ]</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('table')}
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
+              activeTab === 'table'
+                ? 'border-[#00f0ff] bg-[#00f0ff] text-black font-black neon-glow-cyan'
+                : 'border-[#00f0ff]/70 bg-[#02131d] text-[#00f0ff] hover:bg-[#00f0ff]/20'
+            }`}
+            title="Acessar diretamente a Tabela de Valores (Livro-Razão)"
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>[ 05 // TABELA_DE_VALORES ]</span>
           </button>
         </div>
       </div>

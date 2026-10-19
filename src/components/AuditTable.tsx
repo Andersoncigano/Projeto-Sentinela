@@ -9,6 +9,7 @@ interface AuditTableProps {
   onDeleteExpense: (id: string) => void;
   selectedMonth?: string;
   showValues?: boolean;
+  onRestoreDefaults?: () => void;
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({
@@ -16,6 +17,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   onDeleteExpense,
   selectedMonth,
   showValues = true,
+  onRestoreDefaults,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,9 +105,20 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   const renderTableContent = () => (
     <div className="overflow-x-auto mt-3">
       {filtered.length === 0 ? (
-        <div className="py-12 text-center text-neutral-500 text-xs border border-dashed border-neutral-800 bg-black/40">
-          <p className="font-bold text-[#e0f2fe]">// NENHUM REGISTRO ENCONTRADO NO BANCO DE DADOS</p>
-          <p className="text-[11px] text-neutral-600 mt-1">Tente ajustar a busca ou os filtros acima.</p>
+        <div className="py-12 text-center text-neutral-400 text-xs border border-dashed border-neutral-800 bg-black/50 p-4">
+          <p className="font-bold text-[#e0f2fe] text-sm">// NENHUM REGISTRO ENCONTRADO NO BANCO DE DADOS</p>
+          <p className="text-xs text-neutral-400 mt-2">
+            Caso você tenha aberto em um novo navegador e a lista esteja limpa, você pode carregar as despesas reais do cartão com um clique:
+          </p>
+          {onRestoreDefaults && (
+            <button
+              type="button"
+              onClick={onRestoreDefaults}
+              className="mt-4 px-4 py-2 bg-[#00ff66] hover:bg-[#33ff88] text-black font-black text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-[#00ff66]/30 transition-all active:scale-95 inline-flex items-center gap-2"
+            >
+              <span>📥 CARREGAR GASTOS REAIS (ABBEY + UBER)</span>
+            </button>
+          )}
         </div>
       ) : (
         <table className="w-full text-left text-xs">

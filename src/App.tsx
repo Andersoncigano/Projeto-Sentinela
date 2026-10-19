@@ -60,9 +60,41 @@ const DEFAULT_DEBTS: DebtRecord[] = [
   },
 ];
 
+const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
+  {
+    id: 'exp_abbey18_default',
+    data: '2026-10-18',
+    descricao: 'Abbey',
+    valor: 63.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'outros',
+    is_impulsive: false,
+    timestamp: 1729267200000,
+  },
+  {
+    id: 'exp_uber18_default',
+    data: '2026-10-18',
+    descricao: 'Uber',
+    valor: 30.80,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729267200000 + 1,
+  },
+  {
+    id: 'exp_uber17_default',
+    data: '2026-10-17',
+    descricao: 'Uber',
+    valor: 6.10,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729267200000 - 86400000,
+  },
+];
+
 const getInitialExpenses = (): ExpenseRecord[] => {
-  // Inicialização zerada a pedido do usuário para recomeçar do zero
-  return [];
+  return DEFAULT_INITIAL_EXPENSES;
 };
 
 export default function App() {
@@ -94,7 +126,19 @@ export default function App() {
 
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
     const saved = localStorage.getItem('sentinela_expenses_v2');
-    return saved ? JSON.parse(saved) : getInitialExpenses();
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch {
+        // fallback
+      }
+    }
+    // Salva automaticamente para que qualquer novo navegador / aba externa já carregue com os dados reais
+    localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
+    return DEFAULT_INITIAL_EXPENSES;
   });
 
   // Mês selecionado no banco de dados (ex: '2026-10' ou '2026-09')
@@ -103,7 +147,7 @@ export default function App() {
     return saved || '2026-10';
   });
 
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual'>('cockpit');
+  const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table'>('cockpit');
   const [isMuted, setIsMuted] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
 
@@ -142,6 +186,22 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(expenses));
   }, [expenses]);
+
+  // Garante sincronização imediata no navegador caso o storage local anterior estivesse vazio
+  useEffect(() => {
+    const saved = localStorage.getItem('sentinela_expenses_v2');
+    if (!saved || saved === '[]') {
+      setExpenses(DEFAULT_INITIAL_EXPENSES);
+      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
+    }
+  }, []);
+
+  const handleRestoreDefaultExpenses = () => {
+    sound.playSuccess();
+    setExpenses(DEFAULT_INITIAL_EXPENSES);
+    localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
+    showToast('📥 [DESPESAS_CARREGADAS] Abbey (R$ 63,00) e Uber (R$ 30,80) sincronizadas no navegador!');
+  };
 
   useEffect(() => {
     localStorage.setItem('sentinela_show_values', JSON.stringify(showValues));
@@ -408,6 +468,38 @@ export default function App() {
               showValues={showValues} 
             />
 
+            {/* Atalho Rápido para a Tabela de Valores (Livro-Razão) */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-[#02131d] border-2 border-[#00f0ff] shadow-xl">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="w-2.5 h-2.5 bg-[#00ff66] animate-pulse" />
+                <span className="text-xs font-black text-[#00f0ff] tracking-wider uppercase">
+                  📋 TABELA DE VALORES: {expenses.length} GASTOS GRAVADOS NO BANCO
+                </span>
+                <span className="text-[11px] text-neutral-300">
+                  (Abbey R$ 63,00, Uber R$ 30,80...)
+                </span>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('tabela-valores');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-3 py-1.5 bg-black border border-neutral-700 hover:border-[#00f0ff] text-[#e0f2fe] hover:text-[#00f0ff] text-xs font-bold uppercase transition-all cursor-pointer"
+                >
+                  ↓ ROLAR ATÉ TABELA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('table')}
+                  className="px-3.5 py-1.5 bg-[#00f0ff] hover:bg-white text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#00f0ff]/20 active:scale-95"
+                >
+                  ⛶ ABRIR ABA DA TABELA
+                </button>
+              </div>
+            </div>
+
             {/* Raw Input Terminal (NLP / Regex Parser) com suporte a CLEAR e RESET */}
             <RawInputTerminal
               inputVal={terminalInput}
@@ -440,12 +532,15 @@ export default function App() {
             </div>
 
             {/* Audit & Transaction Ledger com filtro por mês selecionado e modo tela cheia */}
-            <AuditTable
-              expenses={expenses}
-              onDeleteExpense={handleDeleteExpense}
-              selectedMonth={selectedMonth}
-              showValues={showValues}
-            />
+            <div id="tabela-valores" className="scroll-mt-24">
+              <AuditTable
+                expenses={expenses}
+                onDeleteExpense={handleDeleteExpense}
+                selectedMonth={selectedMonth}
+                showValues={showValues}
+                onRestoreDefaults={handleRestoreDefaultExpenses}
+              />
+            </div>
           </div>
         )}
 
@@ -467,6 +562,42 @@ export default function App() {
         {activeTab === 'nudge_manual' && (
           <div className="animate-in fade-in duration-150">
             <NudgeManualTab />
+          </div>
+        )}
+
+        {/* TAB 5: TABELA DE VALORES DEDICADA (LIVRO-RAZÃO) */}
+        {activeTab === 'table' && (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-[#02131d] border-2 border-[#00f0ff] shadow-xl">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-[#00ff66] animate-pulse" />
+                  <span className="text-sm font-black text-[#00f0ff] uppercase tracking-wider">
+                    📋 TABELA DE VALORES & AUDITORIA DE TRANSAÇÕES
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-300 mt-1">
+                  Visualização dedicada do Livro-Razão com todas as despesas salvas ({expenses.length} lançamentos: Abbey, Uber, etc.).
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cockpit')}
+                  className="px-3.5 py-1.5 bg-black hover:bg-neutral-900 border border-neutral-600 text-white text-xs font-bold uppercase transition-all cursor-pointer"
+                >
+                  ← VOLTAR AO COCKPIT
+                </button>
+              </div>
+            </div>
+
+            <AuditTable
+              expenses={expenses}
+              onDeleteExpense={handleDeleteExpense}
+              selectedMonth={selectedMonth}
+              showValues={showValues}
+              onRestoreDefaults={handleRestoreDefaultExpenses}
+            />
           </div>
         )}
       </main>
