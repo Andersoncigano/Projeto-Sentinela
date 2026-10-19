@@ -10,7 +10,8 @@ import {
   Trash2,
   RotateCcw,
   Check,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { ExpenseRecord, DebtRecord, SystemSettings } from '../types/sentinela';
 import { formatCurrency } from '../lib/format';
@@ -26,6 +27,7 @@ interface MonthSelectorProps {
   showValues: boolean;
   onRestoreDatabase: (backupData: { expenses: ExpenseRecord[]; debts: DebtRecord[]; settings: SystemSettings }) => void;
   onClearAllData?: () => void;
+  onOpenReport?: () => void;
 }
 
 const MONTH_NAMES = [
@@ -43,6 +45,7 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
   showValues,
   onRestoreDatabase,
   onClearAllData,
+  onOpenReport,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmClear, setConfirmClear] = React.useState(false);
@@ -164,6 +167,23 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
             </button>
           </div>
 
+          {/* Seletor Direto Dropdown */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => {
+              sound.playTick();
+              onSelectMonth(e.target.value);
+            }}
+            className="bg-black border border-[#00f0ff]/60 text-[#ffe600] font-black text-xs px-2 py-1 uppercase focus:outline-none focus:border-[#00f0ff] cursor-pointer"
+            title="Selecionar Mês Base"
+          >
+            {availableMonths.map((m) => (
+              <option key={m} value={m} className="bg-black text-white">
+                {formatMonthName(m)}
+              </option>
+            ))}
+          </select>
+
           {/* Lista rápida de meses com dados gravados */}
           <div className="flex items-center gap-1.5 overflow-x-auto py-1">
             {availableMonths.map((m) => {
@@ -204,8 +224,20 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
             </span>
           </div>
 
-          {/* Backup e Exportação do Banco */}
+          {/* Ações do Banco de Dados & Relatórios */}
           <div className="flex items-center gap-1.5">
+            {onOpenReport && (
+              <button
+                type="button"
+                onClick={onOpenReport}
+                className="px-2.5 py-1 bg-[#03180c] border border-[#00ff66]/70 text-[#00ff66] hover:bg-[#00ff66] hover:text-black text-[10px] font-bold uppercase transition-all flex items-center gap-1 cursor-pointer shadow-sm shadow-[#00ff66]/10"
+                title="Gerar Relatório de Fechamento do Mês ou Data Específica"
+              >
+                <FileText className="w-3 h-3" />
+                <span>RELATÓRIO</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleExportBackup}

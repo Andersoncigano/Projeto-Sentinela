@@ -148,3 +148,20 @@
   background: #ff0055;
   box-shadow: 0 0 8px rgba(255, 0, 85, 0.8);
 }
+
+/* Estilos de Impressão e Exportação para PDF */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .crt-overlay,
+  .crt-vignette {
+    display: none !important;
+  }
+  header,
+  footer {
+    display: none !important;
+  }
+}
+

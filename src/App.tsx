@@ -17,6 +17,7 @@ import { NudgeManualTab } from './components/NudgeManualTab';
 import { MonthSelector } from './components/MonthSelector';
 import { DualScaleTracker } from './components/DualScaleTracker';
 import { NoteBatchImporterModal } from './components/NoteBatchImporterModal';
+import { MonthlyReportView } from './components/MonthlyReportView';
 
 import {
   ExpenseRecord,
@@ -147,7 +148,7 @@ export default function App() {
     return saved || '2026-10';
   });
 
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table'>('cockpit');
+  const [activeTab, setActiveTab] = useState<'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table' | 'report'>('cockpit');
   const [isMuted, setIsMuted] = useState(false);
   const [crtEnabled, setCrtEnabled] = useState(true);
 
@@ -229,27 +230,40 @@ export default function App() {
     });
   };
 
-  // Meses disponíveis no banco de dados
+  // Meses disponíveis no banco de dados (Setembro, Outubro, Novembro e Dezembro / 2026)
   const availableMonths = useMemo(() => {
-    const monthSet = new Set<string>(['2026-09', '2026-10']);
+    const monthSet = new Set<string>(['2026-09', '2026-10', '2026-11', '2026-12']);
+    if (selectedMonth) {
+      monthSet.add(selectedMonth);
+    }
     expenses.forEach((e) => {
       if (e.data && e.data.length >= 7) {
         monthSet.add(e.data.substring(0, 7));
       }
     });
-    return Array.from(monthSet).sort().reverse();
-  }, [expenses]);
+    return Array.from(monthSet).sort();
+  }, [expenses, selectedMonth]);
 
   // Compute Moving Ceiling & Daily Burn Rate para o mês selecionado
   const metrics: BurnRateMetrics = useMemo(() => {
     const [selYear, selMonth] = selectedMonth.split('-').map(Number);
     const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const isCurrentMonth = selectedMonth === currentMonthKey;
+    const currentYear = now.getFullYear();
+    const currentMonthNum = now.getMonth() + 1;
+    const isCurrentMonth = selYear === currentYear && selMonth === currentMonthNum;
+    const isFutureMonth = selYear > currentYear || (selYear === currentYear && selMonth > currentMonthNum);
 
-    const refDate = isCurrentMonth
-      ? now
-      : new Date(selYear, selMonth - 1, new Date(selYear, selMonth, 0).getDate());
+    let refDate: Date;
+    if (isCurrentMonth) {
+      refDate = now;
+    } else if (isFutureMonth) {
+      // Para meses futuros (ex: Novembro e Dezembro), o mês começa no dia 1 com todos os dias disponíveis
+      refDate = new Date(selYear, selMonth - 1, 1);
+    } else {
+      // Para meses passados já fechados, considera o fechamento no último dia do mês
+      const lastDayOfPastMonth = new Date(selYear, selMonth, 0).getDate();
+      refDate = new Date(selYear, selMonth - 1, lastDayOfPastMonth);
+    }
 
     return SentinelaBurnEngine.calculateMetrics(
       settings,
@@ -426,6 +440,7 @@ export default function App() {
               showValues={showValues}
               onRestoreDatabase={handleRestoreDatabase}
               onClearAllData={handleClearAllExpenses}
+              onOpenReport={() => setActiveTab('report')}
             />
 
             {/* Banner de Limpeza se houver despesas no navegador do usuário */}
@@ -539,6 +554,7 @@ export default function App() {
                 selectedMonth={selectedMonth}
                 showValues={showValues}
                 onRestoreDefaults={handleRestoreDefaultExpenses}
+                onOpenReport={() => setActiveTab('report')}
               />
             </div>
           </div>
@@ -597,6 +613,24 @@ export default function App() {
               selectedMonth={selectedMonth}
               showValues={showValues}
               onRestoreDefaults={handleRestoreDefaultExpenses}
+              onOpenReport={() => setActiveTab('report')}
+            />
+          </div>
+        )}
+
+        {/* TAB 6: CENTRAL DE FECHAMENTO & RELATÓRIOS FINANCEIROS */}
+        {activeTab === 'report' && (
+          <div className="animate-in fade-in duration-150">
+            <MonthlyReportView
+              expenses={expenses}
+              settings={settings}
+              debts={debts}
+              metrics={metrics}
+              selectedMonth={selectedMonth}
+              onSelectMonth={setSelectedMonth}
+              availableMonths={availableMonths}
+              showValues={showValues}
+              onBackToCockpit={() => setActiveTab('cockpit')}
             />
           </div>
         )}

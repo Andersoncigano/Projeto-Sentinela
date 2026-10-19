@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Search, Database, Maximize2, Minimize2, ArrowLeft, Filter, Layers } from 'lucide-react';
+import { Trash2, Search, Database, Maximize2, Minimize2, ArrowLeft, Filter, Layers, FileText } from 'lucide-react';
 import { ExpenseRecord } from '../types/sentinela';
 import { sound } from '../lib/sound';
 import { formatCurrency } from '../lib/format';
@@ -10,6 +10,7 @@ interface AuditTableProps {
   selectedMonth?: string;
   showValues?: boolean;
   onRestoreDefaults?: () => void;
+  onOpenReport?: () => void;
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({
@@ -18,6 +19,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   selectedMonth,
   showValues = true,
   onRestoreDefaults,
+  onOpenReport,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -370,6 +372,18 @@ export const AuditTable: React.FC<AuditTableProps> = ({
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             {renderFilterToolbar()}
 
+            {onOpenReport && (
+              <button
+                type="button"
+                onClick={onOpenReport}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-black border border-[#00ff66]/80 text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-[#00ff66]/10 active:scale-95"
+                title="Gerar Relatório de Fechamento do Mês ou Data Específica"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>📑 RELATÓRIO</span>
+              </button>
+            )}
+
             {/* BOTÃO PARA ABRIR EM TELA CHEIA */}
             <button
               type="button"
@@ -421,6 +435,21 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               <span className="text-xs px-2.5 py-1 bg-black border border-neutral-800 text-neutral-300 font-bold">
                 {filtered.length} {filtered.length === 1 ? 'LANÇAMENTO' : 'LANÇAMENTOS'}
               </span>
+
+              {onOpenReport && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseFullscreen();
+                    onOpenReport();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff66] hover:bg-[#33ff88] text-black font-extrabold text-xs uppercase transition-all cursor-pointer shadow-md"
+                  title="Gerar Relatório de Fechamento do Mês ou Data Específica"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>📑 GERAR RELATÓRIO</span>
+                </button>
+              )}
 
               <button
                 type="button"

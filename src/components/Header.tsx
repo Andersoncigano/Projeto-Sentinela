@@ -13,7 +13,8 @@ import {
   Cpu,
   Eye,
   EyeOff,
-  Database
+  Database,
+  FileText
 } from 'lucide-react';
 import { BurnRateMetrics, SystemSettings } from '../types/sentinela';
 import { sound } from '../lib/sound';
@@ -22,8 +23,8 @@ import { formatCurrency } from '../lib/format';
 interface HeaderProps {
   metrics: BurnRateMetrics;
   settings: SystemSettings;
-  activeTab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table';
-  setActiveTab: (tab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table') => void;
+  activeTab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table' | 'report';
+  setActiveTab: (tab: 'cockpit' | 'python_code' | 'simulator' | 'nudge_manual' | 'table' | 'report') => void;
   isMuted: boolean;
   setIsMuted: (muted: boolean) => void;
   crtEnabled: boolean;
@@ -288,6 +289,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Database className="w-3.5 h-3.5" />
             <span>[ 05 // TABELA_DE_VALORES ]</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('report')}
+            className={`flex items-center gap-2 px-3 py-1.5 transition-all text-xs font-bold uppercase whitespace-nowrap border cursor-pointer ${
+              activeTab === 'report'
+                ? 'border-[#00ff66] bg-[#00ff66] text-black font-black neon-glow-green'
+                : 'border-[#00ff66]/70 bg-[#03150b] text-[#00ff66] hover:bg-[#00ff66]/20'
+            }`}
+            title="Gerar Relatório de Fechamento do Mês ou Data Específica"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>[ 06 // RELATÓRIO_FECHAMENTO ]</span>
           </button>
         </div>
       </div>
