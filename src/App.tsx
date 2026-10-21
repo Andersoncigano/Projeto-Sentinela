@@ -31,37 +31,50 @@ import { formatCurrency } from './lib/format';
 
 export { formatCurrency };
 
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
 
 const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
-  reserva_emergencia: 1400.0,
+  reserva_emergencia: 0.0, // A reserva de emergência É a rescisão! Será constituída no dia 30/10
   horas_trabalho_mes: 88.0, // PCD Meio Período (~4h/dia * 22 dias)
   custos_fixos_essenciais: 650.0, // Obrigações: luz, remédio, internet e banco (~R$ 650)
   meta_poupanca_minima: 0.0, // Deixa exatamente R$ 200,00 livres da renda ordinária
   dia_recebimento: 5,
   dia_fechamento_cartao: 17, // Vira dia 17
   dia_vencimento_cartao: 23, // Vence dia 23
+  fatura_outubro_paga: true, // Fatura de 23/10 QUITADA / PAGA pelo usuário
   rescisao_prevista: {
     data_prevista: '2026-10-30',
+    valor: 0.0,
     status: 'aguardando_calculo',
-    observacao: 'Previsão de rescisão a receber no dia 30 - valor líquido a calcular na sexta-feira',
+    observacao: 'A reserva de emergência é a própria rescisão. O valor oficial será descoberto na sexta-feira, dia 30/10.',
   },
 };
 
 const DEFAULT_DEBTS: DebtRecord[] = [
   {
     id: 'debt_cartao_1',
-    credor: 'Fatura do Cartão de Crédito',
+    credor: 'Fatura do Cartão (Outubro/2026 - Paga)',
     valor_total: 0.0,
     valor_pago: 0.0,
     meta_amortizacao_mes: 0.0,
     prioridade: 1,
-    observacao: 'Fatura do cartão de crédito zerada para novo ciclo',
+    observacao: 'Fatura de Outubro QUITADA pelo usuário (R$ 0,00 a vencer em 23/10)',
   },
 ];
 
 const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
+  {
+    id: 'exp_uber21_default',
+    data: '2026-10-21',
+    descricao: 'Uber',
+    valor: 30.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729555200000,
+    vinculado_rescisao: true,
+  },
   {
     id: 'exp_abbey18_default',
     data: '2026-10-18',
@@ -71,6 +84,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     categoria: 'outros',
     is_impulsive: false,
     timestamp: 1729267200000,
+    vinculado_rescisao: true,
   },
   {
     id: 'exp_uber18_default',
@@ -81,6 +95,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     categoria: 'transporte',
     is_impulsive: false,
     timestamp: 1729267200000 + 1,
+    vinculado_rescisao: true,
   },
   {
     id: 'exp_uber17_default',
@@ -91,6 +106,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     categoria: 'transporte',
     is_impulsive: false,
     timestamp: 1729267200000 - 86400000,
+    vinculado_rescisao: true,
   },
 ];
 
@@ -106,12 +122,23 @@ export default function App() {
         const parsed = JSON.parse(saved);
         // Atualiza para o orçamento real informado pelo usuário:
         // Salário: R$ 850, Obrigações fixas (luz, remédio, internet, dívida banco): R$ 650 -> Saldo Livre: R$ 200,00
-        if (parsed.custos_fixos_essenciais !== 650 || parsed.renda_mensal !== 850) {
-          parsed.renda_mensal = 850.0;
-          parsed.custos_fixos_essenciais = 650.0;
-          parsed.meta_poupanca_minima = 0.0;
-          localStorage.setItem('sentinela_settings', JSON.stringify(parsed));
+        parsed.renda_mensal = 850.0;
+        parsed.custos_fixos_essenciais = 650.0;
+        parsed.meta_poupanca_minima = 0.0;
+        parsed.fatura_outubro_paga = true;
+        // A reserva de emergência É a própria rescisão (valor a ser descoberto na sexta, 30/10):
+        if (parsed.rescisao_prevista?.status === 'recebido' && (parsed.rescisao_prevista?.valor ?? 0) > 0) {
+          parsed.reserva_emergencia = parsed.rescisao_prevista.valor;
+        } else {
+          parsed.reserva_emergencia = 0.0;
+          parsed.rescisao_prevista = {
+            data_prevista: '2026-10-30',
+            valor: 0.0,
+            status: 'aguardando_calculo',
+            observacao: 'A reserva de emergência é a própria rescisão (valor a descobrir na sexta, 30/10)',
+          };
         }
+        localStorage.setItem('sentinela_settings', JSON.stringify(parsed));
         return parsed;
       } catch {
         return DEFAULT_SETTINGS;
@@ -131,7 +158,34 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          // Garante que o novo gasto de Uber (R$ 30,00 em 21/10) esteja presente
+          const hasUber21 = parsed.some(
+            (e) => e.data === '2026-10-21' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30) < 0.01
+          );
+
+          // Vincula os gastos de cartão existentes à rescisão conforme instruído pelo usuário
+          const updatedWithVinculo = parsed.map((e) => {
+            const isCartao =
+              e.metodo_pagamento === 'cartao_credito' ||
+              e.metodo_pagamento === 'cartao_proprio' ||
+              e.metodo_pagamento === 'cartao_mae';
+            return {
+              ...e,
+              vinculado_rescisao: e.vinculado_rescisao ?? isCartao,
+            };
+          });
+
+          if (!hasUber21) {
+            const finalExpenses = [
+              DEFAULT_INITIAL_EXPENSES[0], // Uber 30.00 em 21/10
+              ...updatedWithVinculo,
+            ];
+            localStorage.setItem('sentinela_expenses_v2', JSON.stringify(finalExpenses));
+            return finalExpenses;
+          }
+
+          localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updatedWithVinculo));
+          return updatedWithVinculo;
         }
       } catch {
         // fallback
@@ -201,7 +255,27 @@ export default function App() {
     sound.playSuccess();
     setExpenses(DEFAULT_INITIAL_EXPENSES);
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
-    showToast('📥 [DESPESAS_CARREGADAS] Abbey (R$ 63,00) e Uber (R$ 30,80) sincronizadas no navegador!');
+    showToast('📥 [DESPESAS_CARREGADAS] Abbey (R$ 63), Uber 18/10 (R$ 30,80) e Uber 21/10 (R$ 30,00) sincronizadas!');
+  };
+
+  const handleToggleVinculoRescisao = (id: string) => {
+    sound.playTick();
+    setExpenses((prev) => {
+      const updated = prev.map((e) => {
+        if (e.id === id) {
+          const nextVal = !(e.vinculado_rescisao !== false);
+          showToast(
+            nextVal
+              ? `🛡️ [VINCULADO À RESCISÃO] ${e.descricao} (R$ ${e.valor.toFixed(2)}) será pago com a verba rescisória!`
+              : `💼 [DESVINCULADO] ${e.descricao} (R$ ${e.valor.toFixed(2)}) alocado para a receita mensal comum.`
+          );
+          return { ...e, vinculado_rescisao: nextVal };
+        }
+        return e;
+      });
+      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   useEffect(() => {
@@ -348,18 +422,19 @@ export default function App() {
     showToast('✓ [BANCO_DADOS] Backup restaurado com sucesso!');
   };
 
-  // Atualizar valor da rescisão quando o usuário receber no dia 30
+  // Atualizar valor da rescisão quando o usuário receber na sexta dia 30
   const handleUpdateRescisao = (valor: number) => {
     setSettings((prev) => ({
       ...prev,
+      reserva_emergencia: valor, // A reserva de emergência É a rescisão!
       rescisao_prevista: {
         data_prevista: '2026-10-30',
         valor,
         status: 'recebido',
-        observacao: 'Verba rescisória informada pelo usuário',
+        observacao: 'Verba rescisória informada pelo usuário (Reserva de Emergência constituída)',
       },
     }));
-    showToast(`✓ [RESCISAO_GRAVADA] Valor de R$ ${valor.toFixed(2)} registrado no sistema!`);
+    showToast(`✓ [RESERVA_CONSTITUÍDA] Reserva de Emergência criada com R$ ${valor.toFixed(2)} da rescisão!`);
   };
 
   // Limpar todos os valores anteriores para recomeçar o banco de dados do zero
@@ -473,6 +548,131 @@ export default function App() {
               onUpdateRescisao={handleUpdateRescisao}
             />
 
+            {/* Aviso Proeminente: Saldo Pix Real Zerado (Sem entrada real de dinheiro) */}
+            {!metrics.tem_saldo_real && (
+              <div className="bg-[#1a0209] border-2 border-[#ff0055] p-3 text-[#ff0055] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl shadow-[#ff0055]/15 font-mono">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-[#ff0055] flex-shrink-0 animate-pulse" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 bg-[#ff0055] text-black font-black text-[10px] uppercase">
+                        SALDO PIX REAL = R$ 0,00
+                      </span>
+                      <span className="text-xs font-black text-white uppercase tracking-wider">
+                        Sem saldo: gastos vão para o cartão
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-300 mt-0.5">
+                      {metrics.motivo_sem_saldo}. O saldo livre e o teto diário permanecem em R$ 0,00 até a entrada real do dinheiro.
+                    </p>
+                  </div>
+                </div>
+                <div className="px-2 py-1 bg-[#2b040f] border border-[#ff0055]/60 text-[10px] text-[#ff3366] font-bold uppercase flex-shrink-0">
+                  REGRA DE PROTEÇÃO ATIVA
+                </div>
+              </div>
+            )}
+
+            {/* ALERTA CRÍTICO DE FLUXO DE CAIXA: Faturas a Vencer > Dinheiro que vai entrar antes do vencimento */}
+            {metrics.alerta_descompasso?.tem_descompasso && (
+              <div className="bg-[#19030b] border-2 border-[#ff0055] p-3.5 shadow-2xl shadow-[#ff0055]/20 font-mono space-y-2.5 animate-in fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#ff0055]/30">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-[#ff0055] text-black font-black text-[10px] tracking-wider uppercase flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-black animate-pulse" />
+                      <span>[ ALERTA DE FLUXO DE CAIXA: FATURA SUPERA ENTRADAS ]</span>
+                    </span>
+                    <span className="text-[10px] text-[#ff0055] font-bold">
+                      VENCIMENTO DIA {metrics.alerta_descompasso.dia_vencimento}
+                    </span>
+                  </div>
+                  <div className="px-2 py-0.5 bg-[#ff0055]/20 border border-[#ff0055] text-[#ff0055] text-[10px] font-bold uppercase tracking-wider">
+                    DÉFICIT NO VENCIMENTO: -{formatCurrency(metrics.alerta_descompasso.deficit_vencimento, !showValues)}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="bg-[#0b0105] border border-[#ff0055]/40 p-2.5">
+                    <span className="text-[10px] text-neutral-400 block uppercase">Fatura a Vencer (Dia {metrics.alerta_descompasso.dia_vencimento}):</span>
+                    <span className="text-xl font-black text-[#ff0055]">
+                      {formatCurrency(metrics.alerta_descompasso.total_faturas_a_vencer, !showValues)}
+                    </span>
+                    <span className="text-[9px] text-neutral-500 block mt-0.5">
+                      {metrics.alerta_descompasso.dias_ate_vencimento}d até o vencimento
+                    </span>
+                  </div>
+                  <div className="bg-[#0b0105] border border-[#ff0055]/40 p-2.5">
+                    <span className="text-[10px] text-neutral-400 block uppercase">Entradas até Vencimento:</span>
+                    <span className="text-xl font-black text-[#ffe600]">
+                      {formatCurrency(metrics.alerta_descompasso.entradas_antes_vencimento, !showValues)}
+                    </span>
+                    <span className="text-[9px] text-neutral-500 block mt-0.5">
+                      Saldo em mãos + agendado
+                    </span>
+                  </div>
+                  <div className="bg-[#0b0105] border border-[#ff0055]/40 p-2.5">
+                    <span className="text-[10px] text-neutral-400 block uppercase">Próxima Entrada Prevista:</span>
+                    <span className="text-sm font-bold text-neutral-200 block">
+                      {metrics.alerta_descompasso.proxima_entrada_nome || 'Dinheiro'}: {metrics.alerta_descompasso.proxima_entrada_data ? `Dia ${metrics.alerta_descompasso.proxima_entrada_data.split('-')[2]}` : 'Após vencimento'}
+                    </span>
+                    <span className="text-[10px] text-[#ff0055] font-bold block mt-0.5">
+                      {metrics.alerta_descompasso.dias_atraso_entrada ? `⚠️ ${metrics.alerta_descompasso.dias_atraso_entrada} dias APÓS a fatura vencer!` : 'Sem entrada antes da fatura'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-[#24030d] border-l-2 border-[#ff0055] p-2.5 text-[11px] text-neutral-200 space-y-1">
+                  <p className="font-bold text-[#ff4d79] leading-snug">
+                    {metrics.alerta_descompasso.mensagem_alerta}
+                  </p>
+                  <p className="text-[10px] text-neutral-300 leading-snug">
+                    💡 <strong className="text-white">Ação Preventiva:</strong> {metrics.alerta_descompasso.recomendacao}
+                  </p>
+                </div>
+
+                {/* Bloco de Execução da Ponte da Rescisão com a Reserva */}
+                {metrics.alerta_descompasso.plano_ponte && (
+                  <div className="bg-[#120422] border-2 border-[#c084fc] p-3 text-xs space-y-2 mt-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1.5 border-b border-[#c084fc]/40">
+                      <span className="font-bold text-[#c084fc] flex items-center gap-1.5 uppercase text-[10px]">
+                        <span>🛡️</span>
+                        <span>PLANO EXECUTIVO: PONTE DA RESCISÃO (ZERO JUROS DE CARTÃO)</span>
+                      </span>
+                      <span className="text-[10px] text-[#00ff66] font-bold">
+                        RESERVA DE R$ {formatCurrency(settings.reserva_emergencia, !showValues)} DISPONÍVEL
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                      <div className="bg-black/60 border border-[#00ff66]/50 p-2 space-y-1">
+                        <span className="text-[9px] px-1.5 py-0.5 bg-[#00ff66] text-black font-black uppercase inline-block">
+                          PASSO 1: DIA {metrics.alerta_descompasso.dia_vencimento} (VENCIMENTO)
+                        </span>
+                        <p className="text-neutral-200 leading-tight">
+                          Pague <strong>{formatCurrency(metrics.alerta_descompasso.plano_ponte.valor_fatura, !showValues)}</strong> da fatura do cartão utilizando temporariamente a Reserva de Emergência.
+                        </p>
+                        <p className="text-[10px] text-[#00ff66] font-bold">
+                          ✓ Evita juros rotativos de 450% a.a. e multa de atraso.
+                        </p>
+                      </div>
+
+                      <div className="bg-black/60 border border-[#c084fc]/50 p-2 space-y-1">
+                        <span className="text-[9px] px-1.5 py-0.5 bg-[#c084fc] text-black font-black uppercase inline-block">
+                          PASSO 2: DIA {metrics.alerta_descompasso.plano_ponte.dia_recomposicao} (RESCISÃO)
+                        </span>
+                        <p className="text-neutral-200 leading-tight">
+                          Ao cair a rescisão (~{formatCurrency(metrics.alerta_descompasso.plano_ponte.rescisao_estimada, !showValues)}), recomponha <strong>{formatCurrency(metrics.alerta_descompasso.plano_ponte.valor_fatura, !showValues)}</strong> na Reserva (retornando a R$ {formatCurrency(metrics.alerta_descompasso.plano_ponte.reserva_original, !showValues)}).
+                        </p>
+                        <p className="text-[10px] text-[#00f0ff] font-bold">
+                          ✓ Saldo livre restante da rescisão: <strong>{formatCurrency(metrics.alerta_descompasso.plano_ponte.rescisao_restante, !showValues)}</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Top Metric Cards: Renda, Teto Móvel Diário, Saldo Livre */}
             <MetricCards 
               metrics={metrics} 
@@ -523,6 +723,8 @@ export default function App() {
               onRequestFrictionCheck={handleFrictionCheck}
               expenses={expenses}
               onBatchRegister={(newExps) => handleImportBatchExpenses(newExps, selectedMonth)}
+              temSaldoReal={metrics.tem_saldo_real}
+              motivoSemSaldo={metrics.motivo_sem_saldo}
             />
 
             {/* Grid: Debt Management & Emergency Vault */}
@@ -537,10 +739,12 @@ export default function App() {
                 />
               </div>
               <div className="lg:col-span-5">
-                {/* Cofre de Emergência com suporte ao modo de privacidade showValues */}
+                {/* Cofre de Emergência: constituído pela rescisão (a descobrir na sexta dia 30) */}
                 <EmergencyVault
                   balance={settings.reserva_emergencia}
+                  rescisaoPrevista={settings.rescisao_prevista}
                   onEmergencyWithdrawal={handleEmergencyWithdrawal}
+                  onUpdateRescisao={handleUpdateRescisao}
                   showValues={showValues}
                 />
               </div>
@@ -555,6 +759,7 @@ export default function App() {
                 showValues={showValues}
                 onRestoreDefaults={handleRestoreDefaultExpenses}
                 onOpenReport={() => setActiveTab('report')}
+                onToggleVinculoRescisao={handleToggleVinculoRescisao}
               />
             </div>
           </div>
@@ -614,6 +819,7 @@ export default function App() {
               showValues={showValues}
               onRestoreDefaults={handleRestoreDefaultExpenses}
               onOpenReport={() => setActiveTab('report')}
+              onToggleVinculoRescisao={handleToggleVinculoRescisao}
             />
           </div>
         )}

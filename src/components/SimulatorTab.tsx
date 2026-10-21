@@ -125,6 +125,25 @@ export const SimulatorTab: React.FC<SimulatorTabProps> = ({ metrics, settings })
             </div>
           </div>
 
+          {!metrics.tem_saldo_real && (simMethod === 'pix' || simMethod === 'dinheiro') && (
+            <div className="p-3 bg-[#1e030a] border-2 border-[#ff0055] text-xs text-[#ff0055] space-y-2">
+              <p className="font-bold flex items-center gap-1.5 text-[11px]">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#ff0055] animate-pulse" />
+                // ALERTA DE FLUXO DE CAIXA: SALDO PIX = R$ 0,00
+              </p>
+              <p className="text-[10px] text-white leading-relaxed">
+                {metrics.motivo_sem_saldo || 'O dinheiro ainda não entrou na conta.'} <strong className="text-[#ff3366] underline">Sem saldo: gastos vão para o cartão.</strong>
+              </p>
+              <button
+                type="button"
+                onClick={() => setSimMethod('cartao_credito')}
+                className="w-full py-1.5 bg-[#ff0055] hover:bg-white text-black font-black text-[10px] uppercase transition-all cursor-pointer shadow-md"
+              >
+                → DIRECIONAR SIMULAÇÃO PARA CARTÃO DE CRÉDITO
+              </button>
+            </div>
+          )}
+
           {isCartao && (
             <div className="p-3 bg-[#031118] border border-[#00f0ff] text-xs text-[#00f0ff] space-y-1">
               <p className="font-bold flex items-center gap-1.5 text-[11px]">

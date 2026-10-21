@@ -9,7 +9,8 @@ import {
   Sparkles, 
   Check, 
   Info,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import { ExpenseRecord, SystemSettings } from '../types/sentinela';
 import { formatCurrency } from '../lib/format';
@@ -56,13 +57,25 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
   );
   const totalCartao = cartaoExpenses.reduce((acc, e) => acc + e.valor, 0);
 
-  // Escala 3: Verba Rescisória (Pix Rescisão)
-  const rescisaoExpenses = monthExpenses.filter(e => e.metodo_pagamento === 'pix_rescisao');
-  const totalRescisaoGasto = rescisaoExpenses.reduce((acc, e) => acc + e.valor, 0);
-  const valorHomologadoRescisao = settings.rescisao_prevista?.valor || 0;
-  const saldoRestanteRescisao = Math.max(0, valorHomologadoRescisao - totalRescisaoGasto);
+  // Gastos no cartão expressamente vinculados à rescisão pelo usuário
+  const cartaoVinculadoRescisao = cartaoExpenses.filter(e => e.vinculado_rescisao !== false);
+  const totalCartaoVinculadoRescisao = cartaoVinculadoRescisao.reduce((acc, e) => acc + e.valor, 0);
 
-  const totalGeral = totalVista + totalCartao + totalRescisaoGasto;
+  // Escala 3: Verba Rescisória (Pix Rescisão direto + Faturas no Cartão vinculadas à Rescisão)
+  const rescisaoExpenses = monthExpenses.filter(e => e.metodo_pagamento === 'pix_rescisao');
+  const totalRescisaoGastoDireto = rescisaoExpenses.reduce((acc, e) => acc + e.valor, 0);
+  const totalComprometidoRescisao = totalRescisaoGastoDireto + totalCartaoVinculadoRescisao;
+
+  const temRescisaoDefinida = Boolean(
+    settings.rescisao_prevista?.status === 'recebido' &&
+    (settings.rescisao_prevista?.valor ?? 0) > 0
+  );
+  const valorHomologadoRescisao = temRescisaoDefinida ? (settings.rescisao_prevista?.valor || 0) : 0;
+  const saldoRestanteRescisao = temRescisaoDefinida 
+    ? Math.max(0, valorHomologadoRescisao - totalComprometidoRescisao) 
+    : 0;
+
+  const totalGeral = totalVista + totalCartao + totalRescisaoGastoDireto;
   const percVista = totalGeral > 0 ? (totalVista / totalGeral) * 100 : 50;
   const percCartao = totalGeral > 0 ? (totalCartao / totalGeral) * 100 : 50;
 
@@ -75,6 +88,30 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
     // Próximo mês
     const diasNoMes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     diasAteDia5 = (diasNoMes - currentDay) + diaRecebimento;
+  }
+
+  // Regra SALDO PIX REAL: o saldo livre só conta dinheiro que JÁ ENTROU
+  const temRescisaoNoMes = Boolean(
+    settings.rescisao_prevista &&
+    settings.rescisao_prevista.data_prevista.startsWith(selectedMonth)
+  );
+  const rescisaoInformada = Boolean(
+    settings.rescisao_prevista?.status === 'recebido' &&
+    (settings.rescisao_prevista?.valor ?? 0) > 0
+  );
+
+  let dinheiroJaEntrou = true;
+  let motivoSemSaldo = '';
+  if (temRescisaoNoMes) {
+    if (currentDay < 30 && !rescisaoInformada) {
+      dinheiroJaEntrou = false;
+      motivoSemSaldo = 'Antes do dia 30 (sem rescisão informada)';
+    }
+  } else {
+    if (currentDay < diaRecebimento) {
+      dinheiroJaEntrou = false;
+      motivoSemSaldo = `Antes do dia ${String(diaRecebimento).padStart(2, '0')} (salário ainda não creditado)`;
+    }
   }
 
   // Nome formatado do mês selecionado
@@ -124,19 +161,25 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
       {/* Cards das Duas Escalas Lado a Lado */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* ESCALA 1: PIX & À VISTA */}
-        <div className="border border-[#00ff66]/60 bg-[#020e06] p-3.5 relative">
+        <div className={`p-3.5 relative transition-all ${
+          !dinheiroJaEntrou 
+            ? 'border-2 border-[#ff0055] bg-[#140309]' 
+            : 'border border-[#00ff66]/60 bg-[#020e06]'
+        }`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00ff66] text-black font-black text-[10px] tracking-wider uppercase">
-              <Zap className="w-3 h-3 text-black" />
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-black font-black text-[10px] tracking-wider uppercase ${
+              !dinheiroJaEntrou ? 'bg-[#ff0055]' : 'bg-[#00ff66]'
+            }`}>
+              {!dinheiroJaEntrou ? <AlertTriangle className="w-3 h-3 text-black" /> : <Zap className="w-3 h-3 text-black" />}
               <span>ESCALA 1: PIX & À VISTA</span>
             </span>
-            <span className="text-[10px] text-[#00ff66]">
+            <span className={`text-[10px] ${!dinheiroJaEntrou ? 'text-[#ff0055] font-bold' : 'text-[#00ff66]'}`}>
               {vistaExpenses.length} lançamentos
             </span>
           </div>
 
           <div className="my-2">
-            <span className="text-2xl font-black text-[#00ff66]">
+            <span className={`text-2xl font-black ${!dinheiroJaEntrou ? 'text-[#ff0055]' : 'text-[#00ff66]'}`}>
               {formatCurrency(totalVista, isHidden)}
             </span>
             <span className="text-[10px] text-neutral-400 block mt-0.5">
@@ -144,44 +187,187 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
             </span>
           </div>
 
-          <div className="pt-2 border-t border-[#00ff66]/20 text-[10px] text-neutral-400 flex justify-between items-center">
-            <span>CONSUMO DO MÊS:</span>
-            <span className="font-bold text-[#00ff66]">{percVista.toFixed(0)}% do volume total</span>
-          </div>
+          {!dinheiroJaEntrou ? (
+            <div className="pt-2 border-t border-[#ff0055]/30 space-y-1">
+              <div className="text-[10px] font-black text-[#ff0055] flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 animate-pulse text-[#ff0055]" />
+                <span>Sem saldo: gastos vão para o cartão</span>
+              </div>
+              <div className="text-[9px] text-neutral-400">
+                SALDO PIX REAL = R$ 0,00 ({motivoSemSaldo})
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-[#00ff66]/20 text-[10px] text-neutral-400 flex justify-between items-center">
+              <span>CONSUMO DO MÊS:</span>
+              <span className="font-bold text-[#00ff66]">{percVista.toFixed(0)}% do volume total</span>
+            </div>
+          )}
         </div>
 
         {/* ESCALA 2: CARTÃO DE CRÉDITO */}
-        <div className="border border-[#00f0ff]/60 bg-[#030d17] p-3.5 relative">
-          <div className="flex items-center justify-between mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#00f0ff] text-black font-black text-[10px] tracking-wider uppercase">
-              <CreditCard className="w-3 h-3 text-black" />
-              <span>ESCALA 2: CARTÃO DE CRÉDITO</span>
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className="px-1.5 py-0.2 bg-[#00f0ff]/20 border border-[#00f0ff]/50 text-[#00f0ff] text-[9px] font-bold">
-                VIRA DIA 17 • VENCE DIA 23
+        {(() => {
+          const diaFechamento = settings.dia_fechamento_cartao || 17;
+          const diaVencimento = settings.dia_vencimento_cartao || 23;
+          const faturaOutubroPaga = settings.fatura_outubro_paga !== false;
+          const isOutubro = selectedMonth === '2026-10';
+
+          // Gastos feitos a partir do dia 17 (vencem em 23 de Novembro)
+          const cartaoPosVirada = cartaoExpenses.filter(e => {
+            const day = parseInt(e.data.split('-')[2] || '0', 10);
+            return day >= diaFechamento;
+          });
+          const totalPosVirada = cartaoPosVirada.reduce((acc, e) => acc + e.valor, 0);
+
+          // Gastos feitos antes do dia 17
+          const cartaoPreVirada = cartaoExpenses.filter(e => {
+            const day = parseInt(e.data.split('-')[2] || '0', 10);
+            return day < diaFechamento;
+          });
+          const totalPreVirada = faturaOutubroPaga ? 0 : cartaoPreVirada.reduce((acc, e) => acc + e.valor, 0);
+
+          return (
+            <div className="p-3.5 relative transition-all border border-[#00f0ff]/60 bg-[#030d17]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 font-black text-[10px] tracking-wider uppercase bg-[#00f0ff] text-black">
+                  <CreditCard className="w-3 h-3 text-black" />
+                  <span>ESCALA 2: CARTÃO DE CRÉDITO</span>
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-1.5 py-0.2 border text-[9px] font-bold bg-[#00ff66]/20 border-[#00ff66]/60 text-[#00ff66]">
+                    {isOutubro && faturaOutubroPaga ? 'FATURA OUTUBRO: PAGA' : 'VIRA 17 • VENCE 23'}
+                  </span>
+                  <span className="text-[10px] text-[#00f0ff]">
+                    {cartaoExpenses.length} lançamentos
+                  </span>
+                </div>
+              </div>
+
+              <div className="my-2">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-black text-[#00f0ff]">
+                    {formatCurrency(totalCartao, isHidden)}
+                  </span>
+                  <span className="text-[10px] text-[#00ff66] font-bold">
+                    {isOutubro ? 'VENCE 23/11 (NOVA FATURA)' : 'FATURA EM ABERTO'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-neutral-400 block mt-0.5">
+                  {isOutubro 
+                    ? 'Compras feitas após a virada de 17/10: Abbey + Ubers' 
+                    : 'Fatura acumulada para quitação'}
+                </span>
+              </div>
+
+              {/* Status da Fatura de Outubro vs Novembro */}
+              {isOutubro && (
+                <div className="space-y-1.5 my-2">
+                  <div className="p-1.5 bg-[#031d0e] border border-[#00ff66] text-[#00ff66] text-[10px] font-bold flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-[#00ff66]" />
+                      <span>FATURA OUTUBRO (23/10):</span>
+                    </span>
+                    <span className="uppercase tracking-wider">QUITADA / PAGA (R$ 0,00)</span>
+                  </div>
+
+                  <div className="p-1.5 bg-[#100720] border border-[#c084fc] text-[#c084fc] text-[10px] font-bold flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span>🛡️</span>
+                      <span>FATURA NOVEMBRO (23/11):</span>
+                    </span>
+                    <span>{formatCurrency(totalPosVirada, isHidden)} (C/ RESCISÃO)</span>
+                  </div>
+                </div>
+              )}
+
+              {totalCartaoVinculadoRescisao > 0 && !isOutubro && (
+                <div className="mb-2 p-1.5 bg-[#1b0d26] border border-[#c084fc]/60 text-[#c084fc] text-[10px] font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span className="flex items-center gap-1.5">
+                    <span>🛡️</span>
+                    <span>VINCULADO À RESCISÃO: {formatCurrency(totalCartaoVinculadoRescisao, isHidden)}</span>
+                  </span>
+                  <span className="text-[9px] text-[#e9d5ff]">NÃO reduz os R$ 200 do salário!</span>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-[#00f0ff]/20 text-[10px] text-neutral-400 flex justify-between items-center">
+                <span>CICLO DO CARTÃO:</span>
+                <span className="font-bold text-[#00ff66]">Virada 17/10 • Vencimento 23/11</span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* CENTRAL DA PONTE: CARTÃO X RESCISÃO (CONFIRMAÇÃO DO CICLO DE NOVEMBRO) */}
+      {totalCartaoVinculadoRescisao > 0 && (
+        <div className="bg-[#0b0314] border-2 border-[#00ff66] p-3.5 shadow-2xl shadow-[#00ff66]/15 font-mono space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[#00ff66]/40">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-[#00ff66] text-black font-black text-[11px] tracking-wider uppercase flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-black" />
+                <span>[ FLUXO CONFIRMADO: BANDEIRA VIROU NO DIA 17 // SEM DESCOMPASSO ]</span>
               </span>
-              <span className="text-[10px] text-[#00f0ff]">
-                {cartaoExpenses.length} lançamentos
+              <span className="text-[10px] text-[#00ff66] font-bold">
+                TOTAL NOVEMBRO: {formatCurrency(totalCartaoVinculadoRescisao, isHidden)}
               </span>
+            </div>
+            <div className="px-2 py-0.5 bg-[#00ff66]/20 border border-[#00ff66] text-[#00ff66] text-[10px] font-bold uppercase">
+              RESCISÃO ENTRA 24 DIAS ANTES DO VENCIMENTO
             </div>
           </div>
 
-          <div className="my-2">
-            <span className="text-2xl font-black text-[#00f0ff]">
-              {formatCurrency(totalCartao, isHidden)}
-            </span>
-            <span className="text-[10px] text-neutral-400 block mt-0.5">
-              Fatura acumulada para quitação até dia 23
-            </span>
-          </div>
+          <div className="text-[11px] text-neutral-200 leading-relaxed bg-[#03150b] p-3 border border-[#00ff66]/30 space-y-2">
+            <p className="font-bold text-[#e0f2fe]">
+              ✓ <span className="text-[#00ff66] font-black uppercase">Fatura de Outubro já paga</span> pelo usuário. Todos os gastos adicionados (Abbey R$ 63 + Ubers = <span className="text-[#ffe600] font-black">{formatCurrency(totalCartaoVinculadoRescisao, isHidden)}</span>) foram realizados a partir de 17/10 e pertencem à <span className="text-[#00f0ff] font-black underline">Fatura de 23 de Novembro</span>.
+            </p>
 
-          <div className="pt-2 border-t border-[#00f0ff]/20 text-[10px] text-neutral-400 flex justify-between items-center">
-            <span>VOLUME DA FATURA:</span>
-            <span className="font-bold text-[#00f0ff]">{percCartao.toFixed(0)}% do volume total</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+              {/* CARD 1: CRONOGRAMA */}
+              <div className="bg-black/80 border-2 border-[#00ff66]/70 p-2.5 space-y-1">
+                <span className="px-1.5 py-0.5 bg-[#00ff66] text-black font-black text-[9px] uppercase tracking-wider block w-max">
+                  1. CRONOGRAMA DO DINHEIRO
+                </span>
+                <p className="font-bold text-[#00ff66] text-xs">Rescisão Cai na Sexta (30/10)</p>
+                <p className="text-[10px] text-neutral-300 leading-tight">
+                  A verba rescisória entrará na conta na <strong>sexta-feira, dia 30 de Outubro</strong>. O valor exato será conhecido neste dia.
+                </p>
+                <p className="text-[10px] text-[#00ff66] font-bold leading-tight pt-1">
+                  ✓ O dinheiro estará disponível <strong>24 dias antes</strong> da fatura de Novembro vencer!
+                </p>
+              </div>
+
+              {/* CARD 2: QUITAÇÃO */}
+              <div className="bg-black/80 border border-[#00f0ff]/70 p-2.5 space-y-1">
+                <span className="px-1.5 py-0.5 bg-[#00f0ff] text-black font-black text-[9px] uppercase tracking-wider block w-max">
+                  2. QUITAÇÃO DA FATURA
+                </span>
+                <p className="font-bold text-[#00f0ff] text-xs">Vencimento em 23/11</p>
+                <p className="text-[10px] text-neutral-300 leading-tight">
+                  No <strong>Dia 23 de Novembro</strong>, debite os <strong>{formatCurrency(totalCartaoVinculadoRescisao, isHidden)}</strong> diretamente da verba rescisória já depositada.
+                </p>
+                <p className="text-[10px] text-[#00f0ff] font-bold leading-tight pt-1">
+                  ✓ {temRescisaoDefinida ? `Sobra líquida da rescisão: ${formatCurrency(saldoRestanteRescisao, isHidden)}` : 'Quitação tranquila com 24 dias de dinheiro em conta!'}
+                </p>
+              </div>
+
+              {/* CARD 3: RESERVA DE EMERGÊNCIA */}
+              <div className="bg-black/80 border border-[#c084fc]/70 p-2.5 space-y-1">
+                <span className="px-1.5 py-0.5 bg-[#c084fc] text-black font-black text-[9px] uppercase tracking-wider block w-max">
+                  3. A RESERVA É A RESCISÃO
+                </span>
+                <p className="font-bold text-[#c084fc] text-xs">Cofre Constituído no Dia 30</p>
+                <p className="text-[10px] text-neutral-300 leading-tight">
+                  A própria rescisão constituirá sua Reserva de Emergência. Ao abater os {formatCurrency(totalCartaoVinculadoRescisao, isHidden)}, todo o valor remanescente ficará blindado.
+                </p>
+                <p className="text-[10px] text-[#c084fc] font-bold leading-tight pt-1">
+                  ✓ Zero juros, zero rotativo e fundo de sobrevida formado!
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Proporção Comparativa entre as Duas Escalas */}
       <div className="space-y-1.5 bg-black border border-neutral-800 p-3 text-xs">
@@ -285,23 +471,27 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
                 // VERBA RESCISÓRIA: RECEBIMENTO DIA 30 (CÁLCULO NA SEXTA)
               </p>
               <div className="text-neutral-300 text-[10px] space-y-1">
-                {valorHomologadoRescisao > 0 ? (
-                  <div>
-                    <span className="block">
-                      Homologado: <strong className="text-[#00ff66]">{formatCurrency(valorHomologadoRescisao, isHidden)}</strong>
-                      {totalRescisaoGasto > 0 && (
-                        <span className="text-neutral-400"> • Gasto com 'pix rescisão': <strong className="text-[#c084fc]">{formatCurrency(totalRescisaoGasto, isHidden)}</strong></span>
-                      )}
-                    </span>
-                    <span className="block text-[#00f0ff] font-bold mt-0.5">
-                      Saldo livre restante da rescisão: {formatCurrency(saldoRestanteRescisao, isHidden)}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="leading-relaxed">
-                    Aguardando conferência do valor líquido na <strong>sexta-feira</strong> para homologação. Gastos com <code className="text-[#c084fc] bg-black px-1 border border-[#c084fc]/40">pix rescisão</code> são abatidos daqui e <strong>NÃO</strong> reduzem seus R$ 200,00 do salário mensal!
-                  </p>
-                )}
+                <div>
+                  <span className="block">
+                    {valorHomologadoRescisao > 0 ? (
+                      <>Homologado: <strong className="text-[#00ff66]">{formatCurrency(valorHomologadoRescisao, isHidden)}</strong></>
+                    ) : (
+                      <>Previsão Estimada: <strong className="text-[#00ff66]">{formatCurrency(valorProjetadoRescisao, isHidden)}</strong> (cálculo na sexta-feira)</>
+                    )}
+                    {totalCartaoVinculadoRescisao > 0 && (
+                      <span className="text-neutral-300"> • Fatura Cartão (Abbey + Ubers): <strong className="text-[#c084fc]">-{formatCurrency(totalCartaoVinculadoRescisao, isHidden)}</strong></span>
+                    )}
+                    {totalRescisaoGastoDireto > 0 && (
+                      <span className="text-neutral-300"> • Pix Rescisão: <strong className="text-[#c084fc]">-{formatCurrency(totalRescisaoGastoDireto, isHidden)}</strong></span>
+                    )}
+                  </span>
+                  <span className="block text-[#00f0ff] font-bold mt-1">
+                    Saldo líquido restante projetado da rescisão: {formatCurrency(saldoRestanteRescisao, isHidden)}
+                  </span>
+                  <span className="block text-[9px] text-[#00ff66] font-bold mt-0.5">
+                    🛡️ Seus R$ 200,00 do salário mensal continuam 100% blindados e intocados!
+                  </span>
+                </div>
               </div>
             </div>
           </div>

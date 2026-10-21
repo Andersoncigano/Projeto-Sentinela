@@ -23,6 +23,8 @@ interface RawInputTerminalProps {
   onRequestFrictionCheck: (record: ExpenseRecord) => void;
   expenses?: ExpenseRecord[];
   onBatchRegister?: (records: ExpenseRecord[]) => void;
+  temSaldoReal?: boolean;
+  motivoSemSaldo?: string;
 }
 
 const PRESET_COMMANDS = [
@@ -41,6 +43,8 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
   onRequestFrictionCheck,
   expenses = [],
   onBatchRegister,
+  temSaldoReal = true,
+  motivoSemSaldo,
 }) => {
   const [internalInputVal, setInternalInputVal] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -495,12 +499,40 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
               )}
 
               {parseResult.tokens.metodo === 'pix' && (
-                <div className="mt-2 text-xs bg-[#011a0c] border border-[#00ff66]/50 p-2 text-[#00ff66] flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-[#00ff66] flex-shrink-0" />
-                  <span>
-                    <strong>SALDO LIVRE DO SALÁRIO:</strong> Descontará dos seus <strong>R$ 200,00</strong> que sobraram das contas do mês e atualizará seu Teto Diário.
-                  </span>
-                </div>
+                temSaldoReal ? (
+                  <div className="mt-2 text-xs bg-[#011a0c] border border-[#00ff66]/50 p-2 text-[#00ff66] flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-[#00ff66] flex-shrink-0" />
+                    <span>
+                      <strong>SALDO LIVRE DO SALÁRIO:</strong> Descontará dos seus <strong>R$ 200,00</strong> que sobraram das contas do mês e atualizará seu Teto Diário.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs bg-[#24030d] border-2 border-[#ff0055] p-2.5 text-[#ff0055] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertOctagon className="w-4 h-4 text-[#ff0055] flex-shrink-0 animate-pulse" />
+                      <div>
+                        <span className="font-black uppercase tracking-wider block sm:inline">
+                          ⚠️ ATENÇÃO // SALDO PIX REAL = R$ 0,00
+                        </span>
+                        <span className="text-[11px] text-white block mt-0.5">
+                          {motivoSemSaldo ? `${motivoSemSaldo}. ` : 'Dinheiro ainda não entrou. '}
+                          <strong className="text-[#ff3366] underline">Sem saldo: gastos vão para o cartão.</strong>
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playTick();
+                        const updated = inputVal.replace(/\b(pix|dinheiro|debito)\b/gi, 'cartao');
+                        setInputVal(updated);
+                      }}
+                      className="px-2.5 py-1 bg-[#ff0055] hover:bg-white text-black font-black text-[10px] uppercase transition-all cursor-pointer flex-shrink-0 shadow-md"
+                    >
+                      → MUDAR P/ CARTÃO
+                    </button>
+                  </div>
+                )
               )}
 
               {isCard && (

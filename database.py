@@ -19,6 +19,7 @@ class ExpenseRecord:
     metodo_pagamento: str  # 'pix', 'cartao_mae', 'dinheiro', 'outro'
     categoria: str  # 'alimentacao', 'transporte', 'saude', 'impulsivo', 'essencial'
     is_impulsive: bool
+    vinculado_rescisao: bool = False
     created_at: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
@@ -45,8 +46,13 @@ class SystemSettings:
     renda_mensal: float = 850.00
     reserva_emergencia: float = 1400.00
     horas_trabalho_mes: float = 88.0  # PCD Meio Período (~4h/dia * 22 dias)
-    custos_fixos_essenciais: float = 250.00
-    meta_poupanca_minima: float = 50.00
+    custos_fixos_essenciais: float = 650.00
+    meta_poupanca_minima: float = 0.00
+    dia_recebimento: int = 5
+    dia_fechamento_cartao: int = 17
+    dia_vencimento_cartao: int = 23
+    rescisao_prevista: Optional[Dict[str, Any]] = None
+
 
 
 class DatabaseManager:

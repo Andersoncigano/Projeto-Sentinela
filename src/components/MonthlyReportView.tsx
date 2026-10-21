@@ -135,9 +135,40 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
     .filter((e) => e.is_impulsive)
     .reduce((sum, e) => sum + e.valor, 0);
 
+  // Regra SALDO PIX REAL: Dinheiro que já entrou no caixa
+  const [selYearNum, selMonthNum] = selectedMonth.split('-').map(Number);
+  const now = new Date();
+  const isCurrentMonth = selYearNum === now.getFullYear() && selMonthNum === (now.getMonth() + 1);
+  const currentDayReport = isCurrentMonth ? now.getDate() : 31;
+
+  const temRescisaoNoMesReport = Boolean(
+    settings.rescisao_prevista &&
+    settings.rescisao_prevista.data_prevista.startsWith(selectedMonth)
+  );
+  const rescisaoInformadaReport = Boolean(
+    settings.rescisao_prevista?.status === 'recebido' &&
+    (settings.rescisao_prevista?.valor ?? 0) > 0
+  );
+  const diaRecebimentoReport = settings.dia_recebimento || 5;
+
+  let dinheiroJaEntrouReport = true;
+  let motivoSemSaldoReport = '';
+  if (temRescisaoNoMesReport) {
+    if (currentDayReport < 30 && !rescisaoInformadaReport) {
+      dinheiroJaEntrouReport = false;
+      motivoSemSaldoReport = 'Antes do dia 30 (sem rescisão informada)';
+    }
+  } else {
+    if (currentDayReport < diaRecebimentoReport) {
+      dinheiroJaEntrouReport = false;
+      motivoSemSaldoReport = `Antes do dia ${String(diaRecebimentoReport).padStart(2, '0')} (salário ainda não creditado)`;
+    }
+  }
+
   // Sobra do Salário
-  const limiteSalarioLivre = settings.renda_mensal - settings.custos_fixos_essenciais; // R$ 200,00
-  const saldoRestanteSalario = limiteSalarioLivre - totalPixSalario;
+  const baseLimiteSalario = settings.renda_mensal - settings.custos_fixos_essenciais; // R$ 200,00
+  const limiteSalarioLivre = dinheiroJaEntrouReport ? baseLimiteSalario : 0.0;
+  const saldoRestanteSalario = dinheiroJaEntrouReport ? Math.max(0, limiteSalarioLivre - totalPixSalario) : 0.0;
 
   // Custo em horas de trabalho PCD
   const valorHora = settings.renda_mensal / (settings.horas_trabalho_mes || 88);
@@ -568,15 +599,25 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
             </div>
           </div>
 
-          <div className="p-3.5 bg-[#03150b] border border-[#00ff66]/50 print:bg-neutral-100 print:border-black">
-            <div className="text-[10px] text-[#00ff66] uppercase font-mono font-bold print:text-black">
-              3. MARGEM LIVRE DO SALÁRIO
+          <div className={`p-3.5 ${
+            !dinheiroJaEntrouReport 
+              ? 'bg-[#1e030a] border-2 border-[#ff0055]' 
+              : 'bg-[#03150b] border border-[#00ff66]/50'
+          } print:bg-neutral-100 print:border-black`}>
+            <div className={`text-[10px] ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} uppercase font-mono font-bold print:text-black`}>
+              3. MARGEM LIVRE DO SALÁRIO (PIX REAL)
             </div>
-            <div className="text-xl font-black text-[#00ff66] mt-1 print:text-black">
+            <div className={`text-xl font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} mt-1 print:text-black`}>
               {formatCurrency(limiteSalarioLivre, isHidden)}
             </div>
             <div className="text-[11px] text-neutral-300 mt-1 print:text-neutral-700">
-              Teto disponível para gastos à vista/Pix no mês.
+              {!dinheiroJaEntrouReport ? (
+                <span className="text-[#ff0055] font-bold block">
+                  Sem saldo: gastos vão para o cartão ({motivoSemSaldoReport}).
+                </span>
+              ) : (
+                'Teto disponível para gastos à vista/Pix no mês.'
+              )}
             </div>
           </div>
         </div>
@@ -590,22 +631,32 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* ESCALA 1: PIX / À VISTA (SALÁRIO) */}
-            <div className="p-4 bg-[#031008] border-2 border-[#00ff66] space-y-2 print:bg-neutral-50 print:border-black">
+            <div className={`p-4 ${
+              !dinheiroJaEntrouReport 
+                ? 'bg-[#140309] border-2 border-[#ff0055]' 
+                : 'bg-[#031008] border-2 border-[#00ff66]'
+            } space-y-2 print:bg-neutral-50 print:border-black`}>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black text-[#00ff66] uppercase print:text-black">
+                <span className={`text-[11px] font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} uppercase print:text-black`}>
                   ESCALA 1: PIX SALÁRIO (À VISTA)
                 </span>
-                <Wallet className="w-4 h-4 text-[#00ff66] print:text-black" />
+                <Wallet className={`w-4 h-4 ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} print:text-black`} />
               </div>
               <div className="text-2xl font-black text-white mt-1 print:text-black">
                 {formatCurrency(totalPixSalario, isHidden)}
               </div>
               <div className="text-xs text-neutral-300 print:text-neutral-700">
-                Total consumido da sobra dos R$ 200,00.
+                {!dinheiroJaEntrouReport ? (
+                  <span className="text-[#ff0055] font-bold block">
+                    Sem saldo: gastos vão para o cartão
+                  </span>
+                ) : (
+                  <span>Total consumido da sobra dos R$ 200,00.</span>
+                )}
               </div>
               <div className="pt-2 border-t border-neutral-800 print:border-neutral-300 flex items-center justify-between text-xs">
                 <span className="text-neutral-400 print:text-black">Saldo Restante:</span>
-                <span className={`font-black ${saldoRestanteSalario >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'} print:text-black`}>
+                <span className={`font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : saldoRestanteSalario >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'} print:text-black`}>
                   {formatCurrency(saldoRestanteSalario, isHidden)}
                 </span>
               </div>

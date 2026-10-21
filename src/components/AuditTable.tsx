@@ -11,6 +11,7 @@ interface AuditTableProps {
   showValues?: boolean;
   onRestoreDefaults?: () => void;
   onOpenReport?: () => void;
+  onToggleVinculoRescisao?: (id: string) => void;
 }
 
 export const AuditTable: React.FC<AuditTableProps> = ({
@@ -20,10 +21,11 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   showValues = true,
   onRestoreDefaults,
   onOpenReport,
+  onToggleVinculoRescisao,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao' | 'pix' | 'pix_rescisao' | 'essential'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao' | 'pix' | 'pix_rescisao' | 'rescisao_vinculado' | 'essential'>('all');
   const [filterMonthOnly, setFilterMonthOnly] = useState<boolean>(true);
 
   // Escutar a tecla ESC para fechar a tela cheia
@@ -69,6 +71,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
     if (filterType === 'cartao') return isCartao;
     if (filterType === 'pix') return e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito';
     if (filterType === 'pix_rescisao') return e.metodo_pagamento === 'pix_rescisao';
+    if (filterType === 'rescisao_vinculado') return e.vinculado_rescisao !== false || e.metodo_pagamento === 'pix_rescisao';
     if (filterType === 'essential') return !e.is_impulsive;
     return true;
   });
@@ -210,11 +213,23 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                           title={
                             isNovaFatura 
                               ? 'Gasto a partir do dia 17: entra na fatura com vencimento em 23 de Novembro' 
-                              : 'Gasto anterior ao dia 17: entra na fatura com vencimento em 23 de Outubro'
+                              : 'Gasto anterior ao dia 17: fatura de Outubro já quitada pelo usuário'
                           }
                         >
-                          {isNovaFatura ? 'FATURA NOV (VENCE 23/11)' : 'FATURA OUT (VENCE 23/10)'}
+                          {isNovaFatura ? 'FATURA NOV (VENCE 23/11)' : 'FATURA OUT (QUITADA)'}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => onToggleVinculoRescisao?.(item.id)}
+                          className={`px-1.5 py-0.5 text-[8px] font-black uppercase border transition-all cursor-pointer ${
+                            item.vinculado_rescisao !== false
+                              ? 'border-[#c084fc] bg-[#c084fc]/20 text-[#c084fc] hover:bg-[#c084fc]/30'
+                              : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                          }`}
+                          title="Clique para alternar: pagar com a Verba Rescisória ou com o Salário Mensal"
+                        >
+                          {item.vinculado_rescisao !== false ? '🛡️ PAGO PELA RESCISÃO' : '💼 PAGO PELO SALÁRIO'}
+                        </button>
                       </div>
                     );
                   })()}
@@ -329,9 +344,20 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               ? 'bg-[#c084fc] border-[#c084fc] text-black font-bold'
               : 'bg-black border-neutral-800 text-[#c084fc] hover:bg-[#c084fc]/10'
           }`}
-          title="Filtrar despesas gastas com a Verba Rescisória"
+          title="Filtrar despesas gastas diretamente com a Verba Rescisória"
         >
           💼 PIX RESCISÃO
+        </button>
+        <button
+          onClick={() => setFilterType('rescisao_vinculado')}
+          className={`px-2 py-0.5 border cursor-pointer transition-all ${
+            filterType === 'rescisao_vinculado'
+              ? 'bg-[#c084fc] border-[#c084fc] text-black font-bold'
+              : 'bg-black border-neutral-800 text-[#c084fc] hover:bg-[#c084fc]/10'
+          }`}
+          title="Filtrar gastos de cartão vinculados para quitação com a rescisão"
+        >
+          🛡️ VINCULADOS À RESCISÃO
         </button>
 
         {selectedMonth && (
