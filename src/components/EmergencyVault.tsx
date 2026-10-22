@@ -162,6 +162,7 @@ export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={inputRescisao}
                   onChange={(e) => setInputRescisao(e.target.value)}
                   placeholder="Ex: 3500.00"

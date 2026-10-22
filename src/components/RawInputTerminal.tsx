@@ -10,7 +10,9 @@ import {
   CreditCard,
   Layers,
   Briefcase,
-  Zap
+  Zap,
+  Smartphone,
+  PlusCircle
 } from 'lucide-react';
 import { SentinelaParser } from '../lib/parser';
 import { ParseResult, ExpenseRecord } from '../types/sentinela';
@@ -52,6 +54,13 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
 
   const inputVal = externalInputVal !== undefined ? externalInputVal : internalInputVal;
   const setInputVal = externalSetInputVal || setInternalInputVal;
+
+  // Modo de Entrada: 'terminal' (linha de comando) ou 'form' (campos nativos para celular)
+  const [entryMode, setEntryMode] = useState<'terminal' | 'form'>('terminal');
+  const [formValor, setFormValor] = useState('');
+  const [formDesc, setFormDesc] = useState('');
+  const [formMetodo, setFormMetodo] = useState<'pix' | 'cartao_credito' | 'pix_rescisao'>('cartao_credito');
+  const [formData, setFormData] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Verificar despesas registradas pós-virada do dia 17
   const isUber17Done = expenses.some(
@@ -106,6 +115,53 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
       onRegisterExpense(result.record);
       setInputVal('');
       setParseResult(null);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseFloat(formValor.replace(',', '.'));
+    if (isNaN(val) || val <= 0 || !formDesc.trim()) {
+      sound.playFrictionAlert();
+      return;
+    }
+
+    const isCard = formMetodo === 'cartao_credito';
+    const isRescisao = formMetodo === 'pix_rescisao' || isCard;
+
+    const lower = formDesc.toLowerCase();
+    const isImpulsive =
+      lower.includes('lanche') ||
+      lower.includes('ifood') ||
+      lower.includes('chopp') ||
+      lower.includes('cerveja') ||
+      lower.includes('roupa') ||
+      lower.includes('jogos') ||
+      lower.includes('bar') ||
+      (!lower.includes('uber') && (lower.includes('compras') || lower.includes('restaurante')));
+
+    const record: ExpenseRecord = {
+      id: `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      data: formData,
+      descricao: formDesc.trim(),
+      valor: val,
+      metodo_pagamento: formMetodo,
+      categoria: isImpulsive ? 'impulsivo' : 'essencial',
+      is_impulsive: isImpulsive,
+      timestamp: Date.now(),
+      vinculado_rescisao: isRescisao,
+      fatura_mes: isCard ? '2026-11' : undefined,
+      fatura_vencimento: isCard ? '2026-11-23' : undefined,
+    };
+
+    if (record.is_impulsive) {
+      sound.playFrictionAlert();
+      onRequestFrictionCheck(record);
+    } else {
+      sound.playSuccess();
+      onRegisterExpense(record);
+      setFormValor('');
+      setFormDesc('');
     }
   };
 
@@ -200,10 +256,40 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
           <Terminal className="w-3.5 h-3.5 text-black" />
           <span>[ CONSOLE // PARSER REGEX NLP ]</span>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-          <span>ATALHO: [ESC] = LIMPAR</span>
-          <span className="text-neutral-700">|</span>
-          <span className="text-neutral-400">TRANSDUÇÃO INSTANTÂNEA</span>
+
+        {/* Seletor de Modo: Terminal (Linha) vs Formulário (Celular) */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playTick();
+              setEntryMode('terminal');
+            }}
+            className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer border ${
+              entryMode === 'terminal'
+                ? 'bg-[#00f0ff] text-black border-[#00f0ff]'
+                : 'bg-black text-neutral-400 border-neutral-800 hover:text-white'
+            }`}
+          >
+            <Terminal className="w-3 h-3" />
+            <span>⌨️ TERMINAL</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playTick();
+              setEntryMode('form');
+            }}
+            className={`px-2.5 py-1 text-[11px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer border ${
+              entryMode === 'form'
+                ? 'bg-[#00ff66] text-black border-[#00ff66] shadow-sm shadow-[#00ff66]/30'
+                : 'bg-black text-[#00ff66] border-[#00ff66]/60 hover:bg-[#00ff66]/10'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>📱 CAMPOS CELULAR</span>
+          </button>
         </div>
       </div>
 
@@ -384,62 +470,192 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
         </div>
       </div>
 
-      {/* Terminal Input Prompt */}
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="relative flex items-center bg-black border-2 border-[#00f0ff] p-1.5 neon-glow-cyan gap-1.5">
-          <span className="pl-3 pr-2 text-[#00f0ff] font-bold text-xs select-none flex-shrink-0">
-            sentinela@deck:~$
-          </span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputVal}
-            onChange={(e) => setInputVal(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                handleClear();
-              }
-            }}
-            placeholder="Ex: 'uber 30.80 cartao', 'farmacia 25 pix' ou 'compras 120 pix rescisao' e aperte ENTER..."
-            className="w-full bg-transparent text-[#e0f2fe] placeholder:text-neutral-500 focus:outline-none text-xs font-mono py-1.5"
-          />
+      {entryMode === 'form' ? (
+        <form onSubmit={handleFormSubmit} className="bg-[#020b14] border-2 border-[#00ff66] p-3.5 shadow-xl space-y-3 animate-in fade-in">
+          <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+            <span className="text-xs font-black text-[#00ff66] uppercase flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 text-[#00ff66]" />
+              <span>REGISTRO DIRETO PARA CELULAR</span>
+            </span>
+            <span className="text-[10px] text-neutral-400 font-mono">
+              Teclado numérico nativo
+            </span>
+          </div>
 
-          {/* Inline Clear Button when input is not empty */}
-          {inputVal && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="p-1.5 text-neutral-400 hover:text-[#ff0055] hover:bg-neutral-900 transition-colors cursor-pointer"
-              title="Limpar comando (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Campo Valor */}
+            <div>
+              <label className="text-[10px] text-neutral-400 font-bold block mb-1 uppercase">
+                VALOR DO GASTO (R$) *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-neutral-500 font-bold text-sm">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  required
+                  value={formValor}
+                  onChange={(e) => setFormValor(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full bg-black border-2 border-[#00f0ff] focus:border-[#00ff66] text-white font-black text-xl pl-9 pr-3 py-2 focus:outline-none"
+                />
+              </div>
+            </div>
 
-          {/* Botão LIMPAR dedicado */}
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={!inputVal}
-            className="px-2.5 py-1.5 border border-neutral-700 bg-neutral-950 hover:bg-[#ff0055]/20 hover:border-[#ff0055] hover:text-[#ff0055] disabled:opacity-20 disabled:hover:bg-neutral-950 disabled:hover:text-neutral-400 text-neutral-400 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer uppercase flex-shrink-0"
-            title="Limpar o texto digitado e o preview do terminal"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>LIMPAR</span>
-          </button>
+            {/* Campo Descrição */}
+            <div>
+              <label className="text-[10px] text-neutral-400 font-bold block mb-1 uppercase">
+                DESCRIÇÃO / LOCAL *
+              </label>
+              <input
+                type="text"
+                required
+                value={formDesc}
+                onChange={(e) => setFormDesc(e.target.value)}
+                placeholder="Ex: Farmácia, Uber, Lanche..."
+                className="w-full bg-black border-2 border-neutral-700 focus:border-[#00ff66] text-white text-base sm:text-xs px-3 py-2.5 focus:outline-none"
+              />
+            </div>
 
-          {/* Botão EXECUTAR */}
+            {/* Campo Data */}
+            <div>
+              <label className="text-[10px] text-neutral-400 font-bold block mb-1 uppercase">
+                DATA DO GASTO
+              </label>
+              <input
+                type="date"
+                value={formData}
+                onChange={(e) => setFormData(e.target.value)}
+                className="w-full bg-black border-2 border-neutral-700 focus:border-[#00ff66] text-white text-base sm:text-xs px-3 py-2.5 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Seleção do Método em 3 Botões Grandes com 1 Toque */}
+          <div>
+            <label className="text-[10px] text-neutral-400 font-bold block mb-1.5 uppercase">
+              SELECIONE A ORIGEM / MÉTODO DO GASTO:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormMetodo('pix')}
+                className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                  formMetodo === 'pix'
+                    ? 'bg-[#011a0c] border-[#00ff66] text-[#00ff66] font-black shadow-md'
+                    : 'bg-black border-neutral-800 text-neutral-400 hover:border-neutral-600'
+                }`}
+              >
+                <div className="text-xs font-bold flex items-center justify-between">
+                  <span>🟢 1. PIX-SALÁRIO</span>
+                  {formMetodo === 'pix' && <CheckCircle2 className="w-3.5 h-3.5 text-[#00ff66]" />}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-0.5">Sobra dos R$ 200 do salário</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormMetodo('cartao_credito')}
+                className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                  formMetodo === 'cartao_credito'
+                    ? 'bg-[#031522] border-[#00f0ff] text-[#00f0ff] font-black shadow-md shadow-[#00f0ff]/20'
+                    : 'bg-black border-neutral-800 text-neutral-400 hover:border-neutral-600'
+                }`}
+              >
+                <div className="text-xs font-bold flex items-center justify-between">
+                  <span>🔵 2. CARTÃO (23/11)</span>
+                  {formMetodo === 'cartao_credito' && <CheckCircle2 className="w-3.5 h-3.5 text-[#00f0ff]" />}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-0.5">Pago c/ verba da rescisão</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormMetodo('pix_rescisao')}
+                className={`p-2.5 border-2 text-left transition-all cursor-pointer ${
+                  formMetodo === 'pix_rescisao'
+                    ? 'bg-[#170a25] border-[#c084fc] text-[#c084fc] font-black shadow-md'
+                    : 'bg-black border-neutral-800 text-neutral-400 hover:border-neutral-600'
+                }`}
+              >
+                <div className="text-xs font-bold flex items-center justify-between">
+                  <span>🟣 3. PIX-RESCISÃO</span>
+                  {formMetodo === 'pix_rescisao' && <CheckCircle2 className="w-3.5 h-3.5 text-[#c084fc]" />}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-0.5">Débito direto da rescisão</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Botão de Envio Grande */}
           <button
             type="submit"
-            disabled={!inputVal.trim()}
-            className="px-3.5 py-1.5 bg-[#00f0ff] hover:bg-[#00ff66] disabled:opacity-30 disabled:hover:bg-[#00f0ff] text-black font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer uppercase tracking-wider flex-shrink-0"
+            className="w-full py-3 bg-[#00ff66] hover:bg-[#ffe600] text-black font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-[#00ff66]/20 active:scale-98 flex items-center justify-center gap-2 min-h-[46px]"
           >
-            <span>EXECUTAR</span>
-            <CornerDownLeft className="w-3.5 h-3.5" />
+            <PlusCircle className="w-4 h-4" />
+            <span>REGISTRAR GASTO AGORA</span>
           </button>
-        </div>
-      </form>
+        </form>
+      ) : (
+        /* Terminal Input Prompt (100% Responsivo no Celular) */
+        <form onSubmit={handleSubmit} className="relative">
+          <div className="bg-black border-2 border-[#00f0ff] p-2 neon-glow-cyan flex flex-col md:flex-row md:items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0 w-full bg-[#050b14] border border-neutral-800 focus-within:border-[#00f0ff] px-2.5 py-1.5 transition-colors">
+              <span className="text-[#00f0ff] font-bold text-xs select-none flex-shrink-0 font-mono">
+                sentinela@deck:~$
+              </span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleClear();
+                  }
+                }}
+                placeholder="Ex: 'uber 30.80 cartao', 'farmacia 25 pix'..."
+                className="flex-1 min-w-0 w-full bg-transparent text-[#e0f2fe] placeholder:text-neutral-500 focus:outline-none text-base md:text-xs font-mono py-1"
+              />
+
+              {inputVal && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="p-1.5 text-neutral-400 hover:text-[#ff0055] hover:bg-neutral-900 transition-colors cursor-pointer flex-shrink-0"
+                  title="Limpar comando (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 justify-end w-full md:w-auto flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleClear}
+                disabled={!inputVal}
+                className="flex-1 md:flex-none px-3 py-2.5 md:py-1.5 border border-neutral-700 bg-neutral-950 hover:bg-[#ff0055]/20 hover:border-[#ff0055] hover:text-[#ff0055] disabled:opacity-20 text-neutral-400 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer uppercase min-h-[42px] md:min-h-auto"
+                title="Limpar o texto digitado e o preview do terminal"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>LIMPAR</span>
+              </button>
+
+              <button
+                type="submit"
+                disabled={!inputVal.trim()}
+                className="flex-1 md:flex-none px-4 py-2.5 md:py-1.5 bg-[#00f0ff] hover:bg-[#00ff66] disabled:opacity-30 disabled:hover:bg-[#00f0ff] text-black font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider flex-shrink-0 min-h-[42px] md:min-h-auto shadow-md shadow-[#00f0ff]/30 active:scale-95"
+              >
+                <span>EXECUTAR</span>
+                <CornerDownLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
 
       {/* Live Tokenization Breakdown */}
       {parseResult && (
