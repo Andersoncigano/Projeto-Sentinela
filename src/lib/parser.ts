@@ -26,11 +26,15 @@ export class SentinelaParser {
   private static DATE_REGEX = /\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/;
   private static VALUE_REGEX = /(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:reais|rs)?\b/gi;
 
-  public static parse(rawText: string, defaultDate: Date = new Date()): ParseResult {
+  public static parse(
+    rawText: string, 
+    defaultDate: Date = new Date(),
+    defaultMethod: PaymentMethod = 'cartao_credito'
+  ): ParseResult {
     if (!rawText || !rawText.trim()) {
       return {
         success: false,
-        error_message: "Entrada vazia. Experimente: '20/10 lanche 45 pix' ou 'uber 18.50 cartao mae'",
+        error_message: "Entrada vazia. Experimente: 'uber 25' ou 'almoco 30 cartao' ou 'remedio 40'",
       };
     }
 
@@ -73,8 +77,8 @@ export class SentinelaParser {
       text = text.replace(hojeMatch[0], ' ').trim();
     }
 
-    // 2. Extração do Método de Pagamento
-    let extractedMethod: PaymentMethod = 'pix';
+    // 2. Extração do Método de Pagamento (Padrão: Cartão de Crédito pago c/ Rescisão até dia 30)
+    let extractedMethod: PaymentMethod = defaultMethod;
     for (const item of PAYMENT_METHOD_MAP) {
       if (item.pattern.test(text)) {
         extractedMethod = item.method;
@@ -165,6 +169,13 @@ export class SentinelaParser {
       is_impulsive: isImpulsive,
     };
 
+    const isCard =
+      extractedMethod === 'cartao_credito' ||
+      extractedMethod === 'cartao_proprio' ||
+      extractedMethod === 'cartao_mae';
+
+    const isRescisaoPix = extractedMethod === 'pix_rescisao';
+
     const record: ExpenseRecord = {
       id: `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       data: extractedDate,
@@ -174,6 +185,9 @@ export class SentinelaParser {
       categoria: category,
       is_impulsive: isImpulsive,
       timestamp: Date.now(),
+      vinculado_rescisao: isCard || isRescisaoPix,
+      fatura_mes: isCard ? '2026-11' : undefined,
+      fatura_vencimento: isCard ? '2026-11-23' : undefined,
     };
 
     return {

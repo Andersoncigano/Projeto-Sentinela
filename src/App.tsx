@@ -18,6 +18,7 @@ import { MonthSelector } from './components/MonthSelector';
 import { DualScaleTracker } from './components/DualScaleTracker';
 import { NoteBatchImporterModal } from './components/NoteBatchImporterModal';
 import { MonthlyReportView } from './components/MonthlyReportView';
+import { SystemTransitionTracker } from './components/SystemTransitionTracker';
 
 import {
   ExpenseRecord,
@@ -65,6 +66,19 @@ const DEFAULT_DEBTS: DebtRecord[] = [
 
 const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
   {
+    id: 'exp_denis_beulmont_21',
+    data: '2026-10-21',
+    descricao: 'Roupas Denis Beulmont',
+    valor: 341.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'impulsivo',
+    is_impulsive: true,
+    timestamp: 1729555200000 + 10,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
     id: 'exp_uber21_default',
     data: '2026-10-21',
     descricao: 'Uber',
@@ -74,6 +88,8 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     is_impulsive: false,
     timestamp: 1729555200000,
     vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
   },
   {
     id: 'exp_abbey18_default',
@@ -85,6 +101,8 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     is_impulsive: false,
     timestamp: 1729267200000,
     vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
   },
   {
     id: 'exp_uber18_default',
@@ -96,6 +114,8 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     is_impulsive: false,
     timestamp: 1729267200000 + 1,
     vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
   },
   {
     id: 'exp_uber17_default',
@@ -107,6 +127,8 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     is_impulsive: false,
     timestamp: 1729267200000 - 86400000,
     vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
   },
 ];
 
@@ -158,13 +180,17 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Garante que o novo gasto de Uber (R$ 30,00 em 21/10) esteja presente
+          // Garante que o gasto de Denis Beulmont (R$ 341,00 em 21/10) esteja presente
+          const hasDenis = parsed.some(
+            (e) => (e.descricao.toLowerCase().includes('denis') || e.descricao.toLowerCase().includes('beulmont')) && Math.abs(e.valor - 341) < 0.01
+          );
+          // Garante que o gasto de Uber (R$ 30,00 em 21/10) esteja presente
           const hasUber21 = parsed.some(
             (e) => e.data === '2026-10-21' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30) < 0.01
           );
 
-          // Vincula os gastos de cartão existentes à rescisão conforme instruído pelo usuário
-          const updatedWithVinculo = parsed.map((e) => {
+          // Vincula os gastos de cartão existentes à rescisão e define a fatura de Novembro (23/11)
+          let updatedWithVinculo: ExpenseRecord[] = parsed.map((e) => {
             const isCartao =
               e.metodo_pagamento === 'cartao_credito' ||
               e.metodo_pagamento === 'cartao_proprio' ||
@@ -172,16 +198,16 @@ export default function App() {
             return {
               ...e,
               vinculado_rescisao: e.vinculado_rescisao ?? isCartao,
+              fatura_mes: e.fatura_mes ?? (isCartao ? '2026-11' : undefined),
+              fatura_vencimento: e.fatura_vencimento ?? (isCartao ? '2026-11-23' : undefined),
             };
           });
 
+          if (!hasDenis) {
+            updatedWithVinculo = [DEFAULT_INITIAL_EXPENSES[0], ...updatedWithVinculo];
+          }
           if (!hasUber21) {
-            const finalExpenses = [
-              DEFAULT_INITIAL_EXPENSES[0], // Uber 30.00 em 21/10
-              ...updatedWithVinculo,
-            ];
-            localStorage.setItem('sentinela_expenses_v2', JSON.stringify(finalExpenses));
-            return finalExpenses;
+            updatedWithVinculo = [DEFAULT_INITIAL_EXPENSES[1], ...updatedWithVinculo];
           }
 
           localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updatedWithVinculo));
@@ -437,6 +463,24 @@ export default function App() {
     showToast(`✓ [RESERVA_CONSTITUÍDA] Reserva de Emergência criada com R$ ${valor.toFixed(2)} da rescisão!`);
   };
 
+  // Liquidar ou reabrir status da fatura de 23/11 (Etapa 1 da transição com a rescisão)
+  const handleToggleFaturaNovembroPaga = (paga: boolean) => {
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        fatura_novembro_paga: paga,
+        fatura_novembro_paga_em: paga ? new Date().toISOString().split('T')[0] : undefined,
+      };
+      localStorage.setItem('sentinela_settings', JSON.stringify(next));
+      return next;
+    });
+    if (paga) {
+      showToast('✓ [FATURA_23/11_QUITADA] Fatura do cartão de 23/11 liquidada integralmente com a rescisão!');
+    } else {
+      showToast('⚠️ [FATURA_23/11_REABERTA] Status de liquidação da fatura de 23/11 reaberto.');
+    }
+  };
+
   // Limpar todos os valores anteriores para recomeçar o banco de dados do zero
   const handleClearAllExpenses = () => {
     sound.playSuccess();
@@ -545,6 +589,17 @@ export default function App() {
               settings={settings}
               showValues={showValues}
               onOpenNoteImporter={() => setIsNoteImporterOpen(true)}
+              onUpdateRescisao={handleUpdateRescisao}
+            />
+
+            {/* Cronograma de Transição do Sistema: Etapa 1 (23/11 - Cartão) & Etapa 2 (05/12 - Salário) */}
+            <SystemTransitionTracker
+              settings={settings}
+              expenses={expenses}
+              selectedMonth={selectedMonth}
+              showValues={showValues}
+              onToggleFaturaNovembroPaga={handleToggleFaturaNovembroPaga}
+              onSelectMonth={setSelectedMonth}
               onUpdateRescisao={handleUpdateRescisao}
             />
 

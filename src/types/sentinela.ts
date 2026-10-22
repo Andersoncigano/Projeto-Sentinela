@@ -43,6 +43,9 @@ export interface SystemSettings {
   dia_fechamento_cartao?: number; // Dia 17 (Virada da fatura)
   dia_vencimento_cartao?: number; // Dia 23 (Vencimento da fatura)
   fatura_outubro_paga?: boolean; // Fatura de 23/10 já quitada pelo usuário
+  fatura_novembro_paga?: boolean; // Fatura de 23/11 liquidada com a verba rescisória
+  fatura_novembro_paga_em?: string; // Data de liquidação da fatura de 23/11
+  ciclo_dezembro_iniciado?: boolean; // Virada de ciclo para Dezembro a partir de 05/12
   rescisao_prevista?: {
     data_prevista: string; // ex: '2026-10-30'
     valor?: number;

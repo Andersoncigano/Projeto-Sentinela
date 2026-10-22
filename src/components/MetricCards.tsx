@@ -238,12 +238,20 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
 
             <div className="flex items-baseline justify-between mt-1">
               <span className={`text-2xl font-black tracking-tight ${
-                temDescompasso ? 'text-[#ff0055]' : 'text-[#00f0ff]'
+                temDescompasso 
+                  ? 'text-[#ff0055]' 
+                  : settings.fatura_novembro_paga 
+                    ? 'text-[#00ff66]' 
+                    : 'text-[#00f0ff]'
               }`}>
-                {formatCurrency(totalFaturaAtual, isHidden)}
+                {settings.fatura_novembro_paga ? formatCurrency(0, isHidden) : formatCurrency(totalFaturaAtual, isHidden)}
               </span>
               <span className="text-[10px] text-neutral-400">
-                {isOutubro ? 'vence em 23/11' : 'saldo da fatura'}
+                {settings.fatura_novembro_paga 
+                  ? 'paga c/ rescisão ✓' 
+                  : isOutubro 
+                    ? 'vence em 23/11' 
+                    : 'saldo da fatura'}
               </span>
             </div>
 
@@ -266,15 +274,27 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
                   <span>✓ FATURA OUTUBRO QUITADA</span>
                   <span>R$ 0,00 A VENCER (23/10)</span>
                 </div>
-                <div className="p-1.5 bg-[#0f071d] border border-[#c084fc]/50 text-[#c084fc] text-[9.5px] leading-tight space-y-0.5">
-                  <div className="flex items-center justify-between font-bold">
-                    <span>🛡️ COBERTO P/ RESCISÃO</span>
-                    <span className="text-[#00ff66]">+24 DIAS DE FOLGA</span>
+                {settings.fatura_novembro_paga ? (
+                  <div className="p-1.5 bg-[#031d10] border border-[#00ff66] text-[#00ff66] text-[9.5px] leading-tight space-y-0.5">
+                    <div className="flex items-center justify-between font-bold">
+                      <span>✓ FATURA 23/11 QUITADA C/ RESCISÃO</span>
+                      <span className="text-[#00ff66]">R$ 0,00 A PAGAR</span>
+                    </div>
+                    <div className="text-neutral-300 text-[9px]">
+                      Boleto liquidado com a verba rescisória. Próxima virada: Salário em 05/12.
+                    </div>
                   </div>
-                  <div className="text-neutral-300 text-[9px]">
-                    Rescisão cai dia 30/10 e fatura vence só dia 23/11. Reserva 100% protegida!
+                ) : (
+                  <div className="p-1.5 bg-[#0f071d] border border-[#c084fc]/50 text-[#c084fc] text-[9.5px] leading-tight space-y-0.5">
+                    <div className="flex items-center justify-between font-bold">
+                      <span>🛡️ COBERTO P/ RESCISÃO</span>
+                      <span className="text-[#00ff66]">+24 DIAS DE FOLGA</span>
+                    </div>
+                    <div className="text-neutral-300 text-[9px]">
+                      Rescisão cai dia 30/10 e fatura vence só dia 23/11. Reserva 100% protegida!
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="mt-3 pt-2 border-t border-[#00f0ff]/30 text-[11px] flex items-center justify-between text-[#00f0ff]/80">

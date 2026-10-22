@@ -111,30 +111,6 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   // Cálculos consolidados do relatório
   const totalGeral = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
 
-  // Escala 1: Pix Salário & À Vista
-  const totalPixSalario = filteredExpenses
-    .filter((e) => e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito')
-    .reduce((sum, e) => sum + e.valor, 0);
-
-  // Escala 2: Cartão de Crédito
-  const totalCartao = filteredExpenses
-    .filter((e) => e.metodo_pagamento === 'cartao_credito' || e.metodo_pagamento === 'cartao_proprio' || e.metodo_pagamento === 'cartao_mae')
-    .reduce((sum, e) => sum + e.valor, 0);
-
-  // Verba de Rescisão
-  const totalPixRescisao = filteredExpenses
-    .filter((e) => e.metodo_pagamento === 'pix_rescisao')
-    .reduce((sum, e) => sum + e.valor, 0);
-
-  // Comportamental
-  const totalEssencial = filteredExpenses
-    .filter((e) => !e.is_impulsive)
-    .reduce((sum, e) => sum + e.valor, 0);
-
-  const totalImpulsivo = filteredExpenses
-    .filter((e) => e.is_impulsive)
-    .reduce((sum, e) => sum + e.valor, 0);
-
   // Regra SALDO PIX REAL: Dinheiro que já entrou no caixa
   const [selYearNum, selMonthNum] = selectedMonth.split('-').map(Number);
   const now = new Date();
@@ -164,6 +140,43 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
       motivoSemSaldoReport = `Antes do dia ${String(diaRecebimentoReport).padStart(2, '0')} (salário ainda não creditado)`;
     }
   }
+
+  // 1. Pix-Salário: despesas pagas com a sobra do salário ordinário (não vinculadas à rescisão)
+  const totalPixSalario = filteredExpenses
+    .filter((e) => (e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito') && !e.vinculado_rescisao)
+    .reduce((sum, e) => sum + e.valor, 0);
+
+  // 2. Pix-Rescisão-Cartão / Cartão pago com a Rescisão (Fatura 23/11)
+  const totalCartaoRescisao = filteredExpenses
+    .filter((e) => e.metodo_pagamento === 'cartao_credito' || e.metodo_pagamento === 'cartao_proprio' || e.metodo_pagamento === 'cartao_mae')
+    .reduce((sum, e) => sum + e.valor, 0);
+  const totalCartao = totalCartaoRescisao; // alias para compatibilidade
+
+  // 3. Pix-Rescisão Direto (saídas via Pix debitadas da rescisão)
+  const totalPixRescisao = filteredExpenses
+    .filter((e) => e.metodo_pagamento === 'pix_rescisao' || (e.vinculado_rescisao && (e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito')))
+    .reduce((sum, e) => sum + e.valor, 0);
+
+  // Total Comprometido da Rescisão (Cartão 23/11 + Pix Direto)
+  const totalRescisaoComprometida = totalCartaoRescisao + totalPixRescisao;
+
+  // Valor da Rescisão Homologada (que constitui a Reserva de Emergência)
+  const valorOficialRescisao = rescisaoInformadaReport
+    ? (settings.rescisao_prevista?.valor ?? settings.reserva_emergencia)
+    : 0;
+
+  const reservaLiquidaRestante = rescisaoInformadaReport
+    ? Math.max(0, valorOficialRescisao - totalRescisaoComprometida)
+    : null;
+
+  // Comportamental
+  const totalEssencial = filteredExpenses
+    .filter((e) => !e.is_impulsive)
+    .reduce((sum, e) => sum + e.valor, 0);
+
+  const totalImpulsivo = filteredExpenses
+    .filter((e) => e.is_impulsive)
+    .reduce((sum, e) => sum + e.valor, 0);
 
   // Sobra do Salário
   const baseLimiteSalario = settings.renda_mensal - settings.custos_fixos_essenciais; // R$ 200,00
@@ -230,28 +243,38 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
 1. BALANÇO DA RENDA & OBRIGAÇÕES
    • Renda Mensal (PCD): R$ ${settings.renda_mensal.toFixed(2)}
    • Custos Fixos Essenciais: - R$ ${settings.custos_fixos_essenciais.toFixed(2)} (Luz, Farmácia, Internet, Banco)
-   • Margem Livre do Salário: R$ ${limiteSalarioLivre.toFixed(2)}
+   • Margem Livre do Salário (Pix Real): R$ ${limiteSalarioLivre.toFixed(2)}
 
-2. EXECUÇÃO DAS DUAS ESCALAS
-   • 🟢 Pix / À Vista (Sobra do Salário): R$ ${totalPixSalario.toFixed(2)}
-     └─ Saldo Restante do Salário: R$ ${saldoRestanteSalario.toFixed(2)}
-   • 💳 Cartão de Crédito (Venc. Dia 23): R$ ${totalCartao.toFixed(2)}
-     └─ Fechamento da Fatura: Dia 17 | Vencimento: Dia 23
-   • 💼 Pix Rescisão (Verba Dia 30): R$ ${totalPixRescisao.toFixed(2)}
-     └─ Previsão: 30 de Outubro (Aguardando cálculo líquido)
-   • 🛡️ Reserva de Emergência: R$ ${settings.reserva_emergencia.toFixed(2)} (100% intocada)
+2. EXECUÇÃO SEPARADA DAS 3 CATEGORIAS:
+   • 🟢 1. PIX-SALÁRIO: R$ ${totalPixSalario.toFixed(2)}
+     └─ Origem: Sobra do Salário Ordinário (R$ 200,00)
+     └─ Saldo Restante da Margem: R$ ${saldoRestanteSalario.toFixed(2)}
 
-3. QUALIDADE DOS GASTOS
+   • 🔵 2. PIX-RESCISÃO-CARTÃO (CARTÃO PAGO C/ RESCISÃO): R$ ${totalCartaoRescisao.toFixed(2)}
+     └─ Origem: Compras no Cartão a partir de 17/10 até sexta 30/10
+     └─ Fatura: Vencimento em 23/11 (${settings.fatura_novembro_paga ? 'QUITADA COM A RESCISÃO' : 'Quitação integral com a Rescisão'})
+     └─ Status Outubro: Fatura de 23/10 já quitada (R$ 0,00 pendente)
+     └─ Transição do Sistema: Etapa 1 (23/11 - Quitação Cartão) | Etapa 2 (05/12 - Novo Salário)
+
+   • 🟣 3. PIX-RESCISÃO (DIRETO): R$ ${totalPixRescisao.toFixed(2)}
+     └─ Origem: Saídas diretas via Pix abatidas da verba rescisória
+
+3. CONSOLIDAÇÃO DA RESCISÃO & RESERVA DE EMERGÊNCIA:
+   • Total Comprometido da Rescisão (Cartão 23/11 + Pix Direto): R$ ${totalRescisaoComprometida.toFixed(2)}
+   • Valor Oficial da Rescisão (Sexta 30/10): ${rescisaoInformadaReport ? `R$ ${valorOficialRescisao.toFixed(2)}` : 'A DEFINIR NA SEXTA (30/10)'}
+   • Reserva de Emergência Líquida Restante: ${rescisaoInformadaReport ? `R$ ${(reservaLiquidaRestante ?? 0).toFixed(2)}` : `A CALCULAR NA SEXTA 30/10 (- R$ ${totalRescisaoComprometida.toFixed(2)} já comprometidos)`}
+
+4. QUALIDADE DOS GASTOS
    • Gastos Essenciais: R$ ${totalEssencial.toFixed(2)} (${totalGeral > 0 ? ((totalEssencial / totalGeral) * 100).toFixed(1) : 0}%)
    • Gastos Impulsivos: R$ ${totalImpulsivo.toFixed(2)} (${totalGeral > 0 ? ((totalImpulsivo / totalGeral) * 100).toFixed(1) : 0}%)
    • Custo em Trabalho PCD: ~${horasPerdidas.toFixed(1)} horas
    • Total de Lançamentos: ${filteredExpenses.length} itens
    • TOTAL GERAL DO PERÍODO: R$ ${totalGeral.toFixed(2)}
 
-4. SITUAÇÃO DO FECHAMENTO: [ ${statusFechamento.label} ]
+5. SITUAÇÃO DO FECHAMENTO: [ ${statusFechamento.label} ]
    ${statusFechamento.desc}
 
-5. LANÇAMENTOS AUDITADOS:
+6. LANÇAMENTOS AUDITADOS:
 ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart(6, ' ')} | ${e.metodo_pagamento.toUpperCase()} | ${e.descricao} [${e.is_impulsive ? 'IMPULSIVO' : 'ESSENCIAL'}]`).join('\n')}
 ═══════════════════════════════════════════════════════════════════
 `.trim();
@@ -622,83 +645,138 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
           </div>
         </div>
 
-        {/* SEÇÃO 2: RECONCILIAÇÃO DAS DUAS ESCALAS & RESCISÃO */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-300 print:text-black border-b border-neutral-800 pb-1.5 print:border-black">
-            <Layers className="w-3.5 h-3.5 text-[#00f0ff]" />
-            <span>RECONCILIAÇÃO SEPARADA DAS DUAS ESCALAS DE PAGAMENTO</span>
+        {/* SEÇÃO 2: RECONCILIAÇÃO SEPARADA DAS 3 CATEGORIAS & RESCISÃO */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-neutral-800 pb-2 print:border-black">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-300 print:text-black">
+              <Layers className="w-3.5 h-3.5 text-[#00f0ff]" />
+              <span>RECONCILIAÇÃO DAS 3 CATEGORIAS DE GASTOS (REGIME ATÉ SEXTA 30/10)</span>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/30 uppercase hidden sm:inline">
+              Fatura Out/23 Quitada ✓ | Fatura Nov/23 c/ Rescisão
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* ESCALA 1: PIX / À VISTA (SALÁRIO) */}
+            {/* 1. PIX-SALÁRIO */}
             <div className={`p-4 ${
               !dinheiroJaEntrouReport 
                 ? 'bg-[#140309] border-2 border-[#ff0055]' 
                 : 'bg-[#031008] border-2 border-[#00ff66]'
-            } space-y-2 print:bg-neutral-50 print:border-black`}>
+            } space-y-2.5 print:bg-neutral-50 print:border-black shadow-md`}>
               <div className="flex items-center justify-between">
-                <span className={`text-[11px] font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} uppercase print:text-black`}>
-                  ESCALA 1: PIX SALÁRIO (À VISTA)
+                <span className={`text-[11px] font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} uppercase tracking-wide print:text-black flex items-center gap-1.5`}>
+                  <span>🟢 1. PIX-SALÁRIO</span>
                 </span>
                 <Wallet className={`w-4 h-4 ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} print:text-black`} />
               </div>
               <div className="text-2xl font-black text-white mt-1 print:text-black">
                 {formatCurrency(totalPixSalario, isHidden)}
               </div>
-              <div className="text-xs text-neutral-300 print:text-neutral-700">
+              <div className="text-xs text-neutral-300 print:text-neutral-700 leading-snug">
                 {!dinheiroJaEntrouReport ? (
                   <span className="text-[#ff0055] font-bold block">
-                    Sem saldo: gastos vão para o cartão
+                    Sem saldo: compras redirecionadas ao cartão
                   </span>
                 ) : (
-                  <span>Total consumido da sobra dos R$ 200,00.</span>
+                  <span>Gasto regular que consome a sobra dos <strong>R$ 200,00</strong> do salário ordinário.</span>
                 )}
               </div>
               <div className="pt-2 border-t border-neutral-800 print:border-neutral-300 flex items-center justify-between text-xs">
-                <span className="text-neutral-400 print:text-black">Saldo Restante:</span>
+                <span className="text-neutral-400 print:text-black font-medium">Margem Restante:</span>
                 <span className={`font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : saldoRestanteSalario >= 0 ? 'text-[#00ff66]' : 'text-[#ff0055]'} print:text-black`}>
                   {formatCurrency(saldoRestanteSalario, isHidden)}
                 </span>
               </div>
             </div>
 
-            {/* ESCALA 2: CARTÃO DE CRÉDITO */}
-            <div className="p-4 bg-[#0a0802] border-2 border-[#ffe600] space-y-2 print:bg-neutral-50 print:border-black">
+            {/* 2. PIX-RESCISÃO-CARTÃO (CARTÃO PAGO C/ RESCISÃO) */}
+            <div className="p-4 bg-[#031522] border-2 border-[#00f0ff] space-y-2.5 print:bg-neutral-50 print:border-black shadow-md shadow-[#00f0ff]/10">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black text-[#ffe600] uppercase print:text-black">
-                  ESCALA 2: CARTÃO DE CRÉDITO
+                <span className="text-[11px] font-black text-[#00f0ff] uppercase tracking-wide print:text-black flex items-center gap-1.5">
+                  <span>🔵 2. PIX-RESCISÃO-CARTÃO</span>
                 </span>
-                <CreditCard className="w-4 h-4 text-[#ffe600] print:text-black" />
+                <CreditCard className="w-4 h-4 text-[#00f0ff] print:text-black" />
               </div>
-              <div className="text-2xl font-black text-[#ffe600] mt-1 print:text-black">
-                {formatCurrency(totalCartao, isHidden)}
+              <div className="text-2xl font-black text-[#00f0ff] mt-1 print:text-black">
+                {formatCurrency(totalCartaoRescisao, isHidden)}
               </div>
-              <div className="text-xs text-neutral-300 print:text-neutral-700">
-                Fatura que vence no <strong>dia 23</strong>.
+              <div className="text-xs text-neutral-300 print:text-neutral-700 leading-snug">
+                Compras feitas entre <strong>17/10 e 30/10</strong> na fatura com vencimento em <strong>23/11</strong>. Quitação com a rescisão.
               </div>
               <div className="pt-2 border-t border-neutral-800 print:border-neutral-300 flex items-center justify-between text-xs">
-                <span className="text-neutral-400 print:text-black">Virada do Cartão:</span>
-                <span className="font-bold text-white print:text-black">Dia 17 de cada mês</span>
+                <span className="text-neutral-400 print:text-black font-medium">Status Fatura:</span>
+                <span className={`font-bold ${settings.fatura_novembro_paga ? 'text-[#00ff66]' : 'text-[#00f0ff]'} print:text-black`}>
+                  {settings.fatura_novembro_paga ? '✓ QUITADA C/ RESCISÃO' : '23/11/2026 (A Vencer)'}
+                </span>
               </div>
             </div>
 
-            {/* VERBA EXTRA: RESCISÃO PREVISTA */}
-            <div className="p-4 bg-[#0d0413] border-2 border-[#bd00ff] space-y-2 print:bg-neutral-50 print:border-black">
+            {/* 3. PIX-RESCISÃO (DIRETO) */}
+            <div className="p-4 bg-[#0d0413] border-2 border-[#c084fc] space-y-2.5 print:bg-neutral-50 print:border-black shadow-md shadow-[#c084fc]/10">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-black text-[#bd00ff] uppercase print:text-black">
-                  VERBA EXTRA: PIX RESCISÃO
+                <span className="text-[11px] font-black text-[#c084fc] uppercase tracking-wide print:text-black flex items-center gap-1.5">
+                  <span>🟣 3. PIX-RESCISÃO (DIRETO)</span>
                 </span>
-                <Briefcase className="w-4 h-4 text-[#bd00ff] print:text-black" />
+                <Briefcase className="w-4 h-4 text-[#c084fc] print:text-black" />
               </div>
-              <div className="text-2xl font-black text-[#bd00ff] mt-1 print:text-black">
+              <div className="text-2xl font-black text-[#c084fc] mt-1 print:text-black">
                 {formatCurrency(totalPixRescisao, isHidden)}
               </div>
-              <div className="text-xs text-neutral-300 print:text-neutral-700">
-                Gastos já alocados contra a rescisão prevista para o dia 30.
+              <div className="text-xs text-neutral-300 print:text-neutral-700 leading-snug">
+                Saídas diretas via Pix debitadas diretamente do montante rescisório previsto para sexta-feira (30/10).
               </div>
               <div className="pt-2 border-t border-neutral-800 print:border-neutral-300 flex items-center justify-between text-xs">
-                <span className="text-neutral-400 print:text-black">Status:</span>
-                <span className="font-bold text-white print:text-black">Aguardando cálculo</span>
+                <span className="text-neutral-400 print:text-black font-medium">Data Liberação:</span>
+                <span className="font-bold text-white print:text-black">Sexta-feira (30/10)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PAINEL DE CONSOLIDAÇÃO: RESCISÃO & RESERVA DE EMERGÊNCIA */}
+          <div className="p-4 bg-[#050b14] border-2 border-[#ffe600] print:bg-neutral-100 print:border-black">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#ffe600] print:text-black" />
+                  <span className="text-xs font-black uppercase tracking-wider text-[#ffe600] print:text-black">
+                    CONSOLIDAÇÃO: COMPROMETIMENTO DA RESCISÃO & RESERVA DE EMERGÊNCIA
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-1 max-w-2xl print:text-neutral-700">
+                  A rescisão homologada é a sua <strong>Reserva de Emergência</strong>. Todas as compras no cartão até sexta 30/10 + Pix direto saem dessa verba.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
+                <div className="p-2.5 bg-black/70 border border-neutral-800 print:bg-white text-center">
+                  <div className="text-[9px] uppercase font-mono text-neutral-400">Total Comprometido</div>
+                  <div className="text-sm font-black text-[#ffe600] mt-0.5 print:text-black">
+                    {formatCurrency(totalRescisaoComprometida, isHidden)}
+                  </div>
+                  <div className="text-[9px] text-neutral-400 mt-0.5">Cartão + Pix Rescisão</div>
+                </div>
+
+                <div className="p-2.5 bg-black/70 border border-neutral-800 print:bg-white text-center">
+                  <div className="text-[9px] uppercase font-mono text-neutral-400">Rescisão Oficial (30/10)</div>
+                  <div className="text-sm font-black text-white mt-0.5 print:text-black">
+                    {rescisaoInformadaReport ? formatCurrency(valorOficialRescisao, isHidden) : 'A DEFINIR SEXTA'}
+                  </div>
+                  <div className="text-[9px] text-[#00f0ff] mt-0.5">
+                    {rescisaoInformadaReport ? '✓ Homologado' : 'Aguardando 30/10'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-black/70 border border-neutral-800 print:bg-white text-center">
+                  <div className="text-[9px] uppercase font-mono text-neutral-400">Reserva Líquida Restante</div>
+                  <div className={`text-sm font-black ${rescisaoInformadaReport ? 'text-[#00ff66]' : 'text-[#00f0ff]'} mt-0.5 print:text-black`}>
+                    {rescisaoInformadaReport 
+                      ? formatCurrency(reservaLiquidaRestante ?? 0, isHidden)
+                      : `A CALCULAR (-${formatCurrency(totalRescisaoComprometida, isHidden)})`
+                    }
+                  </div>
+                  <div className="text-[9px] text-neutral-400 mt-0.5">Saldo pós-quitação</div>
+                </div>
               </div>
             </div>
           </div>
@@ -796,16 +874,16 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
                         </td>
                         <td className="py-2 px-3 whitespace-nowrap">
                           {isPixRescisao ? (
-                            <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#bd00ff]/20 text-[#bd00ff] border border-[#bd00ff]/60 print:border-black print:text-black">
-                              💼 PIX RESCISÃO
+                            <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#bd00ff]/20 text-[#c084fc] border border-[#bd00ff]/60 print:border-black print:text-black">
+                              🟣 PIX-RESCISÃO
                             </span>
                           ) : isCartao ? (
-                            <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#ffe600]/20 text-[#ffe600] border border-[#ffe600]/60 print:border-black print:text-black">
-                              💳 CARTÃO CRÉDITO (FATURA 23)
+                            <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/60 print:border-black print:text-black">
+                              🔵 PIX-RESCISÃO-CARTÃO (23/11)
                             </span>
                           ) : (
                             <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#00ff66]/20 text-[#00ff66] border border-[#00ff66]/60 print:border-black print:text-black">
-                              🟢 PIX SALÁRIO (À VISTA)
+                              🟢 PIX-SALÁRIO
                             </span>
                           )}
                         </td>

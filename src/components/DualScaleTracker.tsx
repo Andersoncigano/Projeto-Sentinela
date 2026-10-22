@@ -476,7 +476,7 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
                     {valorHomologadoRescisao > 0 ? (
                       <>Homologado: <strong className="text-[#00ff66]">{formatCurrency(valorHomologadoRescisao, isHidden)}</strong></>
                     ) : (
-                      <>Previsão Estimada: <strong className="text-[#00ff66]">{formatCurrency(valorProjetadoRescisao, isHidden)}</strong> (cálculo na sexta-feira)</>
+                      <>Status: <strong className="text-[#c084fc] font-bold">A definir na sexta-feira (dia 30)</strong></>
                     )}
                     {totalCartaoVinculadoRescisao > 0 && (
                       <span className="text-neutral-300"> • Fatura Cartão (Abbey + Ubers): <strong className="text-[#c084fc]">-{formatCurrency(totalCartaoVinculadoRescisao, isHidden)}</strong></span>
@@ -486,7 +486,9 @@ export const DualScaleTracker: React.FC<DualScaleTrackerProps> = ({
                     )}
                   </span>
                   <span className="block text-[#00f0ff] font-bold mt-1">
-                    Saldo líquido restante projetado da rescisão: {formatCurrency(saldoRestanteRescisao, isHidden)}
+                    {valorHomologadoRescisao > 0 
+                      ? `Saldo líquido restante da rescisão (Reserva): ${formatCurrency(saldoRestanteRescisao, isHidden)}` 
+                      : 'A rescisão constituirá sua Reserva de Emergência ao ser depositada na sexta (30/10)'}
                   </span>
                   <span className="block text-[9px] text-[#00ff66] font-bold mt-0.5">
                     🛡️ Seus R$ 200,00 do salário mensal continuam 100% blindados e intocados!

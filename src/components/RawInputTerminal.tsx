@@ -28,11 +28,11 @@ interface RawInputTerminalProps {
 }
 
 const PRESET_COMMANDS = [
-  { key: 'F1', label: 'UBER 16 CARTÃO', cmd: 'uber 16.00 cartao', type: 'safe' },
-  { key: 'F2', label: 'CHOPP 22 CARTÃO', cmd: 'chopp 22.00 cartao', type: 'impulse' },
-  { key: 'F3', label: 'LANCHE 45 PIX', cmd: 'lanche 45 pix', type: 'impulse' },
-  { key: 'F4', label: 'REMÉDIO FARMÁCIA', cmd: 'remedio 32.00 farmacia dinheiro', type: 'safe' },
-  { key: 'F5', label: 'ÔNIBUS 5 DINHEIRO', cmd: 'onibus 5.00 dinheiro', type: 'safe' },
+  { key: 'F1', label: 'UBER 16 CARTÃO (RESCISÃO)', cmd: 'uber 16.00 cartao', type: 'safe' },
+  { key: 'F2', label: 'CHOPP 22 CARTÃO (RESCISÃO)', cmd: 'chopp 22.00 cartao', type: 'impulse' },
+  { key: 'F3', label: 'LANCHE 45 CARTÃO (RESCISÃO)', cmd: 'lanche 45 cartao', type: 'impulse' },
+  { key: 'F4', label: 'REMÉDIO 32 FARMÁCIA CARTÃO', cmd: 'remedio 32.00 farmacia cartao', type: 'safe' },
+  { key: 'F5', label: 'PIX-SALÁRIO 20', cmd: 'onibus 20 pix', type: 'safe' },
   { key: 'F6', label: 'COMPRAS 150 PIX RESCISÃO', cmd: 'compras 150 pix rescisao', type: 'rescisao' },
 ];
 
@@ -53,7 +53,7 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
   const inputVal = externalInputVal !== undefined ? externalInputVal : internalInputVal;
   const setInputVal = externalSetInputVal || setInternalInputVal;
 
-  // Verificar se cada uma das 3 despesas já foi executada e gravada no banco
+  // Verificar despesas registradas pós-virada do dia 17
   const isUber17Done = expenses.some(
     (e) => (e.data === '2026-10-17' || e.data.endsWith('-17')) && Math.abs(e.valor - 6.10) < 0.01
   );
@@ -63,8 +63,11 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
   const isUber18Done = expenses.some(
     (e) => (e.data === '2026-10-18' || e.data.endsWith('-18')) && Math.abs(e.valor - 30.80) < 0.01
   );
+  const isDenisDone = expenses.some(
+    (e) => (e.descricao.toLowerCase().includes('denis') || e.descricao.toLowerCase().includes('beulmont')) && Math.abs(e.valor - 341) < 0.01
+  );
 
-  const allThreeDone = isUber17Done && isAbbey18Done && isUber18Done;
+  const allThreeDone = isUber17Done && isAbbey18Done && isUber18Done && isDenisDone;
 
   // Live parsing as user types
   useEffect(() => {
@@ -274,6 +277,20 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
               <span>{isUber18Done ? '✓ 18/10 UBER: R$ 30,80 (SALVO)' : '🚗 18/10 UBER: R$ 30,80'}</span>
             </button>
 
+            {/* Botão 4: Denis Beulmont 21/10 */}
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('21/10 denis beulmont 341 cartao')}
+              className={`px-2.5 py-1.5 border-2 font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow ${
+                isDenisDone
+                  ? 'bg-[#031d10] border-[#00ff66] text-[#00ff66]'
+                  : 'bg-black border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black'
+              }`}
+              title={isDenisDone ? '✓ Já salvo no banco de dados' : 'Clique para carregar no prompt'}
+            >
+              <span>{isDenisDone ? '✓ 21/10 DENIS: R$ 341,00 (SALVO)' : '👔 21/10 DENIS: R$ 341,00'}</span>
+            </button>
+
             {/* Botão de Gravação Instantânea dos 3 */}
             {!allThreeDone && (
               <button
@@ -317,6 +334,22 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
         ))}
       </div>
 
+      {/* Banner de Operação: Modo Cartão até Sexta 30/10 */}
+      <div className="bg-[#05111c] border-l-4 border-[#00f0ff] p-2 mb-2 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#00f0ff] animate-ping" />
+          <span className="text-[#00f0ff] font-extrabold uppercase text-[11px] tracking-wider">
+            REGIME ATIVO ATÉ SEXTA (30/10):
+          </span>
+          <span className="text-neutral-300 text-[11px]">
+            Compras no cartão caem na fatura de <strong>23/11</strong> e serão quitadas com a rescisão.
+          </span>
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/30 uppercase">
+          Virada 17/10 ✓ | Vence 23/11
+        </span>
+      </div>
+
       {/* Seletor Rápido de Medida / Origem do Recurso */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 p-2 bg-[#020710] border border-neutral-800 text-xs">
         <span className="text-[10px] text-neutral-400 font-extrabold uppercase flex items-center gap-1.5 flex-shrink-0">
@@ -327,26 +360,26 @@ export const RawInputTerminal: React.FC<RawInputTerminalProps> = ({
           <button
             type="button"
             onClick={() => handleAppendMethod('pix')}
-            className="px-2 py-1 bg-[#011a0c] border border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1 bg-[#011a0c] border border-[#00ff66] text-[#00ff66] hover:bg-[#00ff66] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
             title="Gasto comum do dia a dia: consome a sobra dos R$ 200 do seu salário"
           >
-            <span>🟢 1. PIX / SALÁRIO (SOBRA R$ 200)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleAppendMethod('pix rescisao')}
-            className="px-2 py-1 bg-[#170a25] border border-[#c084fc] text-[#c084fc] hover:bg-[#c084fc] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="Gasto com a rescisão: consome a verba rescisória e NÃO mexe nos seus R$ 200"
-          >
-            <span>🟣 2. PIX RESCISÃO (DIA 30)</span>
+            <span>🟢 1. PIX-SALÁRIO (SOBRA R$ 200)</span>
           </button>
           <button
             type="button"
             onClick={() => handleAppendMethod('cartao')}
-            className="px-2 py-1 bg-[#031522] border border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
-            title="Gasto no cartão de crédito da mãe: vai para a fatura com vencimento dia 23"
+            className="px-2.5 py-1 bg-[#031522] border-2 border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black font-black text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer shadow-sm shadow-[#00f0ff]/20"
+            title="Gasto no cartão até sexta 30/10: fatura nov 23/11 paga integralmente com a rescisão"
           >
-            <span>🔵 3. CARTÃO (VIRA 17 / VENCE 23)</span>
+            <span>🔵 2. PIX-RESCISÃO-CARTÃO (FATURA 23/11)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAppendMethod('pix rescisao')}
+            className="px-2.5 py-1 bg-[#170a25] border border-[#c084fc] text-[#c084fc] hover:bg-[#c084fc] hover:text-black font-extrabold text-[10px] uppercase transition-all flex items-center gap-1 cursor-pointer"
+            title="Gasto direto via Pix abatido da rescisão prevista para dia 30"
+          >
+            <span>🟣 3. PIX-RESCISÃO (DIRETO DIA 30)</span>
           </button>
         </div>
       </div>

@@ -121,8 +121,8 @@ export const Header: React.FC<HeaderProps> = ({
             LABOR_CONVERSION: {formatCurrency(valorHora, isHidden)}/HR (88H PCD)
           </span>
           <span className="text-neutral-700">|</span>
-          <span className="text-[#ff0055]">
-            EMERGENCY_RESERVE: {formatCurrency(1400, isHidden)} [SEALED]
+          <span className="text-[#c084fc]">
+            RESERVA_EMERGÊNCIA: {settings.reserva_emergencia > 0 ? formatCurrency(settings.reserva_emergencia, isHidden) : 'RESCISÃO (SEXTA 30/10)'}
           </span>
         </div>
         <div className="flex items-center gap-3 text-neutral-500">
