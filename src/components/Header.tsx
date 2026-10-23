@@ -178,6 +178,26 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end flex-wrap">
             {getStatusBadge()}
 
+            {/* Quick Access to Report Button (especially useful on mobile!) */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playTick();
+                setActiveTab('report');
+              }}
+              className={`px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
+                activeTab === 'report'
+                  ? 'border-[#00ff66] bg-[#00ff66] text-black neon-glow-green animate-pulse'
+                  : 'border-[#00ff66] bg-[#00ff66]/15 text-[#00ff66] hover:bg-[#00ff66]/30 shadow-md shadow-[#00ff66]/20'
+              }`}
+              title="Acessar Relatório de Fechamento"
+            >
+              <FileText className="w-4 h-4 text-[#00ff66]" />
+              <span className="text-[11px] uppercase tracking-wider font-black">
+                {activeTab === 'report' ? '✓ RELATÓRIO ABERTO' : '📊 VER RELATÓRIO'}
+              </span>
+            </button>
+
             {/* Privacy Mode Toggle: MOSTRAR RENDA / OCULTAR RENDA */}
             <button
               onClick={handleToggleValues}
@@ -226,6 +246,49 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[10px]">{isMuted ? 'MUTE' : 'AUDIO'}</span>
             </button>
           </div>
+        </div>
+
+        {/* Mobile Fast Switcher Row (Only visible on small screens to switch instantly between Cockpit, Tabela e Relatório) */}
+        <div className="flex md:hidden items-center justify-between gap-1.5 mt-2 pt-2 border-t border-[#141b2e] text-[11px] font-bold">
+          <button
+            onClick={() => {
+              sound.playTick();
+              setActiveTab('cockpit');
+            }}
+            className={`flex-1 py-1.5 px-2 border text-center transition-all ${
+              activeTab === 'cockpit'
+                ? 'border-[#00ff66] bg-[#00ff66] text-black font-black'
+                : 'border-neutral-800 bg-black/60 text-neutral-400'
+            }`}
+          >
+            01 COCKPIT
+          </button>
+          <button
+            onClick={() => {
+              sound.playTick();
+              setActiveTab('table');
+            }}
+            className={`flex-1 py-1.5 px-2 border text-center transition-all ${
+              activeTab === 'table'
+                ? 'border-[#00f0ff] bg-[#00f0ff] text-black font-black'
+                : 'border-neutral-800 bg-black/60 text-neutral-400'
+            }`}
+          >
+            05 TABELA
+          </button>
+          <button
+            onClick={() => {
+              sound.playTick();
+              setActiveTab('report');
+            }}
+            className={`flex-1 py-1.5 px-2 border text-center transition-all ${
+              activeTab === 'report'
+                ? 'border-[#00ff66] bg-[#00ff66] text-black font-black neon-glow-green'
+                : 'border-[#00ff66]/60 bg-[#02180c] text-[#00ff66]'
+            }`}
+          >
+            06 RELATÓRIO
+          </button>
         </div>
 
         {/* Cyberpunk Tiled Tab Bar */}

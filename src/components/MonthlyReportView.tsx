@@ -666,7 +666,7 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
             } space-y-2.5 print:bg-neutral-50 print:border-black shadow-md`}>
               <div className="flex items-center justify-between">
                 <span className={`text-[11px] font-black ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} uppercase tracking-wide print:text-black flex items-center gap-1.5`}>
-                  <span>🟢 1. PIX-SALÁRIO</span>
+                  <span>🟢 TABELA 1: VALOR PIX SALÁRIO</span>
                 </span>
                 <Wallet className={`w-4 h-4 ${!dinheiroJaEntrouReport ? 'text-[#ff0055]' : 'text-[#00ff66]'} print:text-black`} />
               </div>
@@ -694,7 +694,7 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
             <div className="p-4 bg-[#031522] border-2 border-[#00f0ff] space-y-2.5 print:bg-neutral-50 print:border-black shadow-md shadow-[#00f0ff]/10">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-[#00f0ff] uppercase tracking-wide print:text-black flex items-center gap-1.5">
-                  <span>🔵 2. PIX-RESCISÃO-CARTÃO</span>
+                  <span>🔵 TABELA 2: VALOR PIX CARTÃO - TOTAL</span>
                 </span>
                 <CreditCard className="w-4 h-4 text-[#00f0ff] print:text-black" />
               </div>
@@ -716,7 +716,7 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
             <div className="p-4 bg-[#0d0413] border-2 border-[#c084fc] space-y-2.5 print:bg-neutral-50 print:border-black shadow-md shadow-[#c084fc]/10">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black text-[#c084fc] uppercase tracking-wide print:text-black flex items-center gap-1.5">
-                  <span>🟣 3. PIX-RESCISÃO (DIRETO)</span>
+                  <span>🟣 TABELA 3: VALOR PIX - RESCISÃO</span>
                 </span>
                 <Briefcase className="w-4 h-4 text-[#c084fc] print:text-black" />
               </div>

@@ -107,8 +107,9 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   };
 
   // Renderizador comum da tabela para reuso nos dois modos
+  // Renderizador comum da tabela para reuso nos dois modos
   const renderTableContent = () => (
-    <div className="overflow-x-auto mt-3">
+    <div className="mt-3 space-y-3">
       {filtered.length === 0 ? (
         <div className="py-12 text-center text-neutral-400 text-xs border border-dashed border-neutral-800 bg-black/50 p-4">
           <p className="font-bold text-[#e0f2fe] text-sm">// NENHUM REGISTRO ENCONTRADO NO BANCO DE DADOS</p>
@@ -126,138 +127,227 @@ export const AuditTable: React.FC<AuditTableProps> = ({
           )}
         </div>
       ) : (
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-neutral-800 text-[10px] text-neutral-400 uppercase tracking-widest bg-black/80 sticky top-0 z-10 backdrop-blur-sm">
-              <th className="py-2.5 px-3">DATA</th>
-              <th className="py-2.5 px-3">DESCRIÇÃO</th>
-              <th className="py-2.5 px-3">VALOR</th>
-              <th className="py-2.5 px-3">MÉTODO DE PAGAMENTO</th>
-              <th className="py-2.5 px-3">CLASSIFICAÇÃO</th>
-              <th className="py-2.5 px-3 text-right">AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-900">
-            {filtered.map((item) => (
-              <tr
-                key={item.id}
-                className={`hover:bg-[#00f0ff]/5 transition-colors ${
-                  item.is_impulsive ? 'bg-[#1a0208]/40' : ''
-                }`}
-              >
-                <td className="py-2.5 px-3 text-neutral-400 whitespace-nowrap font-mono text-[11px]">
-                  {item.data}
-                </td>
-                <td className="py-2.5 px-3 font-bold text-[#e0f2fe]">
-                  {item.descricao}
-                </td>
-                <td className="py-2.5 px-3 font-black text-[#ffe600] whitespace-nowrap text-[13px]">
-                  {formatCurrency(item.valor, !showValues)}
-                </td>
-                <td className="py-2.5 px-3 whitespace-nowrap">
-                  {(() => {
-                    const isCard = item.metodo_pagamento === 'cartao_credito' || 
-                                   item.metodo_pagamento === 'cartao_proprio' || 
-                                   item.metodo_pagamento === 'cartao_mae';
-                    if (!isCard) {
-                      if (item.metodo_pagamento === 'pix_rescisao') {
-                        return (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase border border-[#c084fc] text-[#c084fc] bg-black">
-                              PIX RESCISÃO
-                            </span>
-                            <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase border border-[#c084fc]/50 bg-[#c084fc]/10 text-[#c084fc]">
-                              VERBA DIA 30
-                            </span>
-                          </div>
-                        );
-                      }
+        <>
+          {/* VISUALIZAÇÃO EM CARTÕES PARA CELULARES (ALTA VISIBILIDADE EM TELAS PEQUENAS) */}
+          <div className="block md:hidden space-y-2.5">
+            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-bold px-1">
+              <span>LISTA DE LANÇAMENTOS ({filtered.length} ITENS):</span>
+              <span className="text-[#ffe600] font-black">TOTAL: {formatCurrency(totalGeral, !showValues)}</span>
+            </div>
 
-                      if (item.metodo_pagamento === 'pix') {
-                        return (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase border border-[#00ff66] text-[#00ff66] bg-black">
-                              PIX SALÁRIO
-                            </span>
-                            <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase border border-[#00ff66]/50 bg-[#00ff66]/10 text-[#00ff66]">
-                              SOBRA R$ 200
-                            </span>
-                          </div>
-                        );
-                      }
+            {filtered.map((item) => {
+              const isCard = item.metodo_pagamento === 'cartao_credito' || 
+                             item.metodo_pagamento === 'cartao_proprio' || 
+                             item.metodo_pagamento === 'cartao_mae';
+              const isPixRescisao = item.metodo_pagamento === 'pix_rescisao';
 
-                      return (
-                        <span
-                          className="px-1.5 py-0.5 text-[9px] font-black uppercase border border-neutral-700 text-neutral-400 bg-black"
-                        >
-                          {item.metodo_pagamento.replace('_', ' ')}
+              return (
+                <div 
+                  key={`mobile_${item.id}`}
+                  className="p-3 bg-[#02050b] border-2 border-neutral-700 hover:border-[#00f0ff] transition-all space-y-2 relative"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] text-[#00f0ff] font-mono block">{item.data}</span>
+                      <h4 className="text-sm font-black text-white mt-0.5">{item.descricao}</h4>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-lg font-black text-[#ffe600] font-mono block bg-black/80 px-2 py-0.5 border border-[#ffe600]/50 neon-glow-yellow">
+                        {formatCurrency(item.valor, !showValues)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-neutral-800 text-[10px] flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isPixRescisao ? (
+                        <span className="px-1.5 py-0.5 font-black uppercase border border-[#c084fc] text-[#c084fc] bg-[#c084fc]/15">
+                          🟣 PIX RESCISÃO
                         </span>
-                      );
-                    }
-
-                    // Se o gasto foi no dia 17 ou posterior, entra na fatura que vence em 23 de Novembro
-                    const itemDay = parseInt(item.data.split('-')[2] || '0', 10);
-                    const isNovaFatura = itemDay >= 17;
-
-                    return (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-1.5 py-0.5 text-[9px] font-black uppercase border border-[#00f0ff] text-[#00f0ff] bg-black">
-                          CARTÃO CRÉDITO
+                      ) : isCard ? (
+                        <span className="px-1.5 py-0.5 font-black uppercase border border-[#00f0ff] text-[#00f0ff] bg-[#00f0ff]/15">
+                          🔵 CARTÃO (23/11)
                         </span>
-                        <span
-                          className={`px-1.5 py-0.5 text-[8px] font-bold uppercase border ${
-                            isNovaFatura
-                              ? 'border-[#00ff66]/50 bg-[#00ff66]/10 text-[#00ff66]'
-                              : 'border-[#ffe600]/50 bg-[#ffe600]/10 text-[#ffe600]'
-                          }`}
-                          title={
-                            isNovaFatura 
-                              ? 'Gasto a partir do dia 17: entra na fatura com vencimento em 23 de Novembro' 
-                              : 'Gasto anterior ao dia 17: fatura de Outubro já quitada pelo usuário'
-                          }
-                        >
-                          {isNovaFatura ? 'FATURA NOV (VENCE 23/11)' : 'FATURA OUT (QUITADA)'}
+                      ) : (
+                        <span className="px-1.5 py-0.5 font-black uppercase border border-[#00ff66] text-[#00ff66] bg-[#00ff66]/15">
+                          🟢 PIX SALÁRIO
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => onToggleVinculoRescisao?.(item.id)}
-                          className={`px-1.5 py-0.5 text-[8px] font-black uppercase border transition-all cursor-pointer ${
-                            item.vinculado_rescisao !== false
-                              ? 'border-[#c084fc] bg-[#c084fc]/20 text-[#c084fc] hover:bg-[#c084fc]/30'
-                              : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
-                          }`}
-                          title="Clique para alternar: pagar com a Verba Rescisória ou com o Salário Mensal"
-                        >
-                          {item.vinculado_rescisao !== false ? '🛡️ PAGO PELA RESCISÃO' : '💼 PAGO PELO SALÁRIO'}
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </td>
-                <td className="py-2.5 px-3 whitespace-nowrap">
-                  {item.is_impulsive ? (
-                    <span className="px-2 py-0.5 bg-[#ff0055] text-black text-[9px] font-black uppercase">
-                      IMPULSIVO 🚨
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 bg-[#00ff66] text-black text-[9px] font-black uppercase">
-                      ESSENCIAL ✓
-                    </span>
-                  )}
-                </td>
-                <td className="py-2.5 px-3 text-right">
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="p-1.5 hover:text-[#ff0055] text-neutral-500 hover:bg-neutral-800 transition-colors cursor-pointer"
-                    title="Excluir despesa e restaurar teto diário"
+                      )}
+
+                      <span className={`px-1.5 py-0.5 font-bold uppercase ${item.is_impulsive ? 'bg-[#ff0055]/20 text-[#ff0055] border border-[#ff0055]/50' : 'bg-[#00ff66]/20 text-[#00ff66] border border-[#00ff66]/50'}`}>
+                        {item.is_impulsive ? 'Impulsivo' : 'Essencial'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item.id)}
+                      className="p-1 text-neutral-500 hover:text-[#ff0055] transition-colors"
+                      title="Excluir despesa"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* TABELA COMPLETA TRADICIONAL (DESKTOP E TABLETS) */}
+          <div className="hidden md:block overflow-x-auto border border-neutral-800">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b-2 border-neutral-700 text-[11px] text-neutral-300 uppercase tracking-widest bg-black sticky top-0 z-10 font-bold">
+                  <th className="py-3 px-3">DATA</th>
+                  <th className="py-3 px-3">DESCRIÇÃO / ESTABELECIMENTO</th>
+                  <th className="py-3 px-3 text-right">VALOR DO GASTO</th>
+                  <th className="py-3 px-3">MÉTODO DE PAGAMENTO</th>
+                  <th className="py-3 px-3">CLASSIFICAÇÃO</th>
+                  <th className="py-3 px-3 text-right">AÇÕES</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-800 bg-[#02050c]">
+                {filtered.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`hover:bg-[#00f0ff]/10 transition-colors ${
+                      item.is_impulsive ? 'bg-[#1a0208]/30' : ''
+                    }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <td className="py-3 px-3 text-neutral-300 whitespace-nowrap font-mono text-xs">
+                      {item.data}
+                    </td>
+                    <td className="py-3 px-3 font-black text-white text-sm">
+                      {item.descricao}
+                    </td>
+                    <td className="py-3 px-3 font-mono font-black text-[#ffe600] whitespace-nowrap text-base text-right">
+                      <span className="px-2 py-0.5 bg-black/80 border border-[#ffe600]/40 rounded-sm">
+                        {formatCurrency(item.valor, !showValues)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      {(() => {
+                        const isCard = item.metodo_pagamento === 'cartao_credito' || 
+                                       item.metodo_pagamento === 'cartao_proprio' || 
+                                       item.metodo_pagamento === 'cartao_mae';
+                        if (!isCard) {
+                          if (item.metodo_pagamento === 'pix_rescisao') {
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2 py-0.5 text-[10px] font-black uppercase border border-[#c084fc] text-[#c084fc] bg-black">
+                                  🟣 PIX RESCISÃO
+                                </span>
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase border border-[#c084fc]/50 bg-[#c084fc]/10 text-[#c084fc]">
+                                  VERBA DIA 30
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (item.metodo_pagamento === 'pix') {
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2 py-0.5 text-[10px] font-black uppercase border border-[#00ff66] text-[#00ff66] bg-black">
+                                  🟢 PIX SALÁRIO
+                                </span>
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase border border-[#00ff66]/50 bg-[#00ff66]/10 text-[#00ff66]">
+                                  SOBRA R$ 200
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase border border-neutral-700 text-neutral-300 bg-black">
+                              {item.metodo_pagamento.replace('_', ' ')}
+                            </span>
+                          );
+                        }
+
+                        // Se o gasto foi no dia 17 ou posterior, entra na fatura que vence em 23 de Novembro
+                        const itemDay = parseInt(item.data.split('-')[2] || '0', 10);
+                        const isNovaFatura = itemDay >= 17;
+
+                        return (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase border border-[#00f0ff] text-[#00f0ff] bg-black">
+                              🔵 CARTÃO CRÉDITO
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.5 text-[9px] font-bold uppercase border ${
+                                isNovaFatura
+                                  ? 'border-[#00ff66]/60 bg-[#00ff66]/15 text-[#00ff66]'
+                                  : 'border-[#ffe600]/60 bg-[#ffe600]/15 text-[#ffe600]'
+                              }`}
+                            >
+                              {isNovaFatura ? 'FATURA NOV (VENCE 23/11)' : 'FATURA OUT (QUITADA)'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onToggleVinculoRescisao?.(item.id)}
+                              className={`px-1.5 py-0.5 text-[9px] font-black uppercase border transition-all cursor-pointer ${
+                                item.vinculado_rescisao !== false
+                                  ? 'border-[#c084fc] bg-[#c084fc]/20 text-[#c084fc] hover:bg-[#c084fc]/30'
+                                  : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                              }`}
+                              title="Clique para alternar o vínculo"
+                            >
+                              {item.vinculado_rescisao !== false ? '🛡️ PAGO PELA RESCISÃO' : '💼 PAGO PELO SALÁRIO'}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      {item.is_impulsive ? (
+                        <span className="px-2 py-0.5 bg-[#ff0055] text-black text-[10px] font-black uppercase">
+                          IMPULSIVO 🚨
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-[#00ff66] text-black text-[10px] font-black uppercase">
+                          ESSENCIAL ✓
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-1.5 hover:text-[#ff0055] text-neutral-500 hover:bg-neutral-800 transition-colors cursor-pointer"
+                        title="Excluir despesa"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+
+              {/* RODAPÉ COM TOTAL GERAL EM DESTAQUE */}
+              <tfoot>
+                <tr className="border-t-2 border-[#00f0ff] bg-[#02131d] text-white">
+                  <td colSpan={2} className="py-3.5 px-3 uppercase tracking-wider text-xs font-black text-[#00f0ff]">
+                    ⚡ TOTAL GERAL DA TABELA ({filtered.length} LANÇAMENTOS):
+                  </td>
+                  <td className="py-3.5 px-3 text-right font-black font-mono text-lg text-[#ffe600] whitespace-nowrap">
+                    <span className="px-3 py-1 bg-black border-2 border-[#ffe600] neon-glow-yellow">
+                      {formatCurrency(totalGeral, !showValues)}
+                    </span>
+                  </td>
+                  <td colSpan={3} className="py-3.5 px-3 text-xs text-neutral-300">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-[#00f0ff] font-bold">Cartão: {formatCurrency(totalCartao, !showValues)}</span>
+                      <span className="text-neutral-600">|</span>
+                      <span className="text-[#00ff66] font-bold">Pix Salário: {formatCurrency(totalPixSalario, !showValues)}</span>
+                      <span className="text-neutral-600">|</span>
+                      <span className="text-[#c084fc] font-bold">Pix Rescisão: {formatCurrency(totalPixRescisao, !showValues)}</span>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -420,6 +510,41 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               <Maximize2 className="w-3.5 h-3.5" />
               <span>⛶ TELA CHEIA</span>
             </button>
+          </div>
+        </div>
+
+        {/* CARDS DE TOTAIS EM ALTA VISIBILIDADE (SEMPRE VISÍVEIS) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3">
+          <div className="border-2 border-[#ffe600] bg-[#120f02] p-3 shadow-lg shadow-[#ffe600]/15">
+            <span className="text-[10px] text-[#ffe600] uppercase block font-black">⚡ TOTAL GERAL DE VALORES</span>
+            <span className="text-xl sm:text-2xl font-black text-[#ffe600] block mt-1 neon-glow-yellow">
+              {formatCurrency(totalGeral, !showValues)}
+            </span>
+            <span className="text-[10px] text-neutral-400 mt-0.5 block">{filtered.length} lançamentos</span>
+          </div>
+
+          <div className="border-2 border-[#00f0ff] bg-[#001726] p-3 shadow-lg shadow-[#00f0ff]/15">
+            <span className="text-[10px] text-[#00f0ff] uppercase block font-black">🔵 TABELA 2: VALOR PIX CARTÃO - TOTAL</span>
+            <span className="text-xl sm:text-2xl font-black text-[#00f0ff] block mt-1 neon-glow-cyan">
+              {formatCurrency(totalCartao, !showValues)}
+            </span>
+            <span className="text-[10px] text-neutral-400 mt-0.5 block">Pago com a Rescisão (23/11)</span>
+          </div>
+
+          <div className="border-2 border-[#00ff66] bg-[#012210] p-3 shadow-lg shadow-[#00ff66]/15">
+            <span className="text-[10px] text-[#00ff66] uppercase block font-black">🟢 TABELA 1: VALOR PIX SALÁRIO</span>
+            <span className="text-xl sm:text-2xl font-black text-[#00ff66] block mt-1 neon-glow-green">
+              {formatCurrency(totalPixSalario, !showValues)}
+            </span>
+            <span className="text-[10px] text-neutral-400 mt-0.5 block">Sobra livre de R$ 200 intacta</span>
+          </div>
+
+          <div className="border-2 border-[#c084fc] bg-[#1c0b2b] p-3 shadow-lg shadow-[#c084fc]/15">
+            <span className="text-[10px] text-[#c084fc] uppercase block font-black">🟣 TABELA 3: VALOR PIX - RESCISÃO</span>
+            <span className="text-xl sm:text-2xl font-black text-[#c084fc] block mt-1">
+              {formatCurrency(totalPixRescisao, !showValues)}
+            </span>
+            <span className="text-[10px] text-neutral-400 mt-0.5 block">Verba oficial na sexta 30/10</span>
           </div>
         </div>
 

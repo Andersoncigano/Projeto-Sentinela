@@ -32,7 +32,19 @@ import { formatCurrency } from './lib/format';
 
 export { formatCurrency };
 
-import { RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
+import { 
+  RotateCcw, 
+  Trash2, 
+  AlertTriangle, 
+  FileText, 
+  ChevronDown, 
+  ChevronUp, 
+  CreditCard, 
+  CheckCircle2, 
+  ArrowRight, 
+  ExternalLink,
+  Sparkles 
+} from 'lucide-react';
 
 const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
@@ -66,6 +78,45 @@ const DEFAULT_DEBTS: DebtRecord[] = [
 
 const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
   {
+    id: 'exp_abbey23',
+    data: '2026-10-23',
+    descricao: 'Abbey Chopp',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1729684800000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_abbey22',
+    data: '2026-10-22',
+    descricao: 'Abbey Chopp',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1729598400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber22',
+    data: '2026-10-22',
+    descricao: 'Uber',
+    valor: 5.78,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729598400000 - 3600000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
     id: 'exp_denis_beulmont_21',
     data: '2026-10-21',
     descricao: 'Roupas Denis Beulmont',
@@ -92,6 +143,19 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
+    id: 'exp_uber20',
+    data: '2026-10-20',
+    descricao: 'Uber',
+    valor: 36.71,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729425600000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
     id: 'exp_abbey18_default',
     data: '2026-10-18',
     descricao: 'Abbey',
@@ -105,10 +169,23 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
+    id: 'exp_uber18_3588',
+    data: '2026-10-18',
+    descricao: 'Uber',
+    valor: 35.88,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729267200000 + 7200000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
     id: 'exp_uber18_default',
     data: '2026-10-18',
     descricao: 'Uber',
-    valor: 30.80,
+    valor: 30.87,
     metodo_pagamento: 'cartao_credito',
     categoria: 'transporte',
     is_impulsive: false,
@@ -180,35 +257,46 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Garante que o gasto de Denis Beulmont (R$ 341,00 em 21/10) esteja presente
-          const hasDenis = parsed.some(
-            (e) => (e.descricao.toLowerCase().includes('denis') || e.descricao.toLowerCase().includes('beulmont')) && Math.abs(e.valor - 341) < 0.01
-          );
-          // Garante que o gasto de Uber (R$ 30,00 em 21/10) esteja presente
-          const hasUber21 = parsed.some(
-            (e) => e.data === '2026-10-21' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30) < 0.01
-          );
-
-          // Vincula os gastos de cartão existentes à rescisão e define a fatura de Novembro (23/11)
+          // Ajusta Uber de 18/10 de 30.80 para 30.87 se necessário
           let updatedWithVinculo: ExpenseRecord[] = parsed.map((e) => {
             const isCartao =
               e.metodo_pagamento === 'cartao_credito' ||
               e.metodo_pagamento === 'cartao_proprio' ||
               e.metodo_pagamento === 'cartao_mae';
+            let val = e.valor;
+            if (e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.80) < 0.02) {
+              val = 30.87;
+            }
             return {
               ...e,
+              valor: val,
               vinculado_rescisao: e.vinculado_rescisao ?? isCartao,
               fatura_mes: e.fatura_mes ?? (isCartao ? '2026-11' : undefined),
               fatura_vencimento: e.fatura_vencimento ?? (isCartao ? '2026-11-23' : undefined),
             };
           });
 
-          if (!hasDenis) {
-            updatedWithVinculo = [DEFAULT_INITIAL_EXPENSES[0], ...updatedWithVinculo];
-          }
-          if (!hasUber21) {
-            updatedWithVinculo = [DEFAULT_INITIAL_EXPENSES[1], ...updatedWithVinculo];
-          }
+          // Deduplicação da corrida de R$ 30,87 no dia 18/10 para evitar duplicidade (R$ 620,21 vs R$ 589,34)
+          let seenUber18_3087 = false;
+          updatedWithVinculo = updatedWithVinculo.filter((e) => {
+            if (e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.87) < 0.02) {
+              if (seenUber18_3087) return false;
+              seenUber18_3087 = true;
+            }
+            return true;
+          });
+
+          // Garante que todas as despesas oficiais de DEFAULT_INITIAL_EXPENSES estejam presentes no navegador
+          DEFAULT_INITIAL_EXPENSES.forEach((def) => {
+            const exists = updatedWithVinculo.some(
+              (e) => e.data === def.data && Math.abs(e.valor - def.valor) < 0.01 && e.descricao.toLowerCase().includes(def.descricao.toLowerCase().split(' ')[0])
+            );
+            if (!exists) {
+              updatedWithVinculo.push(def);
+            }
+          });
+
+          updatedWithVinculo.sort((a, b) => b.data.localeCompare(a.data) || b.timestamp - a.timestamp);
 
           localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updatedWithVinculo));
           return updatedWithVinculo;
@@ -242,6 +330,39 @@ export default function App() {
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isNoteImporterOpen, setIsNoteImporterOpen] = useState(false);
+  const [mobileReportExpanded, setMobileReportExpanded] = useState(false);
+
+  // Consolidação dos 3 Pilares para exibição instantânea no Cockpit e no Celular
+  const cockpitReportData = useMemo(() => {
+    const list = expenses.filter((e) => e.data && e.data.startsWith(selectedMonth));
+    const pixSalario = list
+      .filter((e) => (e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito') && !e.vinculado_rescisao)
+      .reduce((sum, e) => sum + e.valor, 0);
+
+    const cartaoRescisao = list
+      .filter((e) => e.metodo_pagamento === 'cartao_credito' || e.metodo_pagamento === 'cartao_proprio' || e.metodo_pagamento === 'cartao_mae')
+      .reduce((sum, e) => sum + e.valor, 0);
+
+    const pixRescisao = list
+      .filter((e) => e.metodo_pagamento === 'pix_rescisao' || (e.vinculado_rescisao && (e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito')))
+      .reduce((sum, e) => sum + e.valor, 0);
+
+    const sortedList = [...list].sort((a, b) => b.data.localeCompare(a.data) || b.timestamp - a.timestamp);
+
+    const countUber18_3087 = list.filter(
+      (e) => e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.87) < 0.02
+    ).length;
+
+    return {
+      pixSalario,
+      cartaoRescisao,
+      pixRescisao,
+      totalGeral: pixSalario + cartaoRescisao + pixRescisao,
+      count: list.length,
+      sortedList,
+      countUber18_3087,
+    };
+  }, [expenses, selectedMonth]);
 
   // Salvar preferências no localStorage
   useEffect(() => {
@@ -481,6 +602,50 @@ export default function App() {
     }
   };
 
+  // Ajustar se houve 1 corrida de 30,87 (Total R$ 589,34) ou 2 corridas de 30,87 (Total R$ 620,21)
+  const handleSetUber18Count = (count: 1 | 2) => {
+    sound.playSuccess();
+    setExpenses((prev) => {
+      let filteredWithoutUber18_3087 = prev.filter(
+        (e) => !(e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.87) < 0.02)
+      );
+
+      const baseUber18_3087: ExpenseRecord = {
+        id: 'exp_uber18_default',
+        data: '2026-10-18',
+        descricao: 'Uber',
+        valor: 30.87,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: 1729267200000 + 1,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      };
+
+      const itemsToAdd = [baseUber18_3087];
+      if (count === 2) {
+        itemsToAdd.push({
+          ...baseUber18_3087,
+          id: 'exp_uber18_3087_segunda',
+          descricao: 'Uber (2ª Corrida 18/10)',
+          timestamp: 1729267200000 + 2,
+        });
+      }
+
+      const updated = [...filteredWithoutUber18_3087, ...itemsToAdd].sort((a, b) => b.data.localeCompare(a.data) || b.timestamp - a.timestamp);
+      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (count === 1) {
+      showToast('✓ [TOTAL: R$ 589,34] Definido para 10 compras (1 corrida Uber 18/10 de R$ 30,87).');
+    } else {
+      showToast('✓ [TOTAL: R$ 620,21] Definido para 11 compras (2 corridas Uber 18/10 de R$ 30,87).');
+    }
+  };
+
   // Limpar todos os valores anteriores para recomeçar o banco de dados do zero
   const handleClearAllExpenses = () => {
     sound.playSuccess();
@@ -561,6 +726,244 @@ export default function App() {
               onClearAllData={handleClearAllExpenses}
               onOpenReport={() => setActiveTab('report')}
             />
+
+            {/* =========================================================================
+                TABELA TOTAL DOS VALORES :: TELA DE CIMA (ALTA VISIBILIDADE)
+                ========================================================================= */}
+            <div className="bg-[#030814] border-2 border-[#00f0ff] p-4 sm:p-5 font-mono shadow-2xl shadow-[#00f0ff]/15 space-y-4">
+              
+              {/* BANNER PRINCIPAL COM O TOTAL GERAL DO SISTEMA */}
+              <div className="bg-[#02050b] border-2 border-[#ffe600] p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl shadow-[#ffe600]/15">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 bg-[#ffe600] text-black font-black text-xs uppercase tracking-wider">
+                      ⚡ TABELA TOTAL DE VALORES DO SISTEMA
+                    </span>
+                    <span className="text-xs text-[#00ff66] font-bold">
+                      {cockpitReportData.count} LANÇAMENTOS AUDITADOS
+                    </span>
+                  </div>
+                  <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+                    CONSOLIDAÇÃO GERAL DE OUTUBRO/2026
+                  </h2>
+                  <p className="text-xs text-neutral-400">
+                    Soma de todos os gastos (Cartão 23/11 pago com a rescisão + Pix-Salário + Pix-Rescisão)
+                  </p>
+                </div>
+
+                <div className="w-full md:w-auto bg-black/95 px-5 py-3 border-2 border-[#ffe600] text-right flex flex-row md:flex-col items-center md:items-end justify-between gap-2 neon-glow-yellow">
+                  <span className="text-[11px] text-[#ffe600] font-bold uppercase tracking-widest block">
+                    TOTAL GERAL DE GASTOS:
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-[#ffe600] tracking-tight block">
+                    {formatCurrency(cockpitReportData.totalGeral, !showValues)}
+                  </span>
+                </div>
+              </div>
+
+              {/* TABELA ESTRUTURADA DE TOTAIS POR CATEGORIA (TELA DE CIMA) */}
+              <div className="overflow-x-auto border border-neutral-700 bg-black/80">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-neutral-700 bg-neutral-900/90 text-neutral-300 font-bold uppercase text-[11px]">
+                      <th className="py-2.5 px-3">MÉTODO / TABELA</th>
+                      <th className="py-2.5 px-3 text-right">VALOR TOTAL</th>
+                      <th className="py-2.5 px-3">VENCIMENTO / STATUS</th>
+                      <th className="py-2.5 px-3">FONTE DE QUITAÇÃO</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800">
+                    {/* Linha 1: Tabela 1: Valor Pix Salário */}
+                    <tr className="hover:bg-neutral-900/40">
+                      <td className="py-2.5 px-3 font-bold text-[#00ff66] flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#00ff66] inline-block" />
+                        <span>🟢 TABELA 1: VALOR PIX SALÁRIO</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-base text-[#00ff66] font-mono">
+                        {formatCurrency(cockpitReportData.pixSalario, !showValues)}
+                      </td>
+                      <td className="py-2.5 px-3 text-neutral-300">
+                        <span className="px-1.5 py-0.5 bg-[#00ff66]/15 text-[#00ff66] border border-[#00ff66]/40 text-[10px] font-bold">
+                          ✓ SALDO INTACTO (R$ 200 LIVRE)
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-neutral-400">
+                        Sobra da renda ordinária mensal
+                      </td>
+                    </tr>
+
+                    {/* Linha 2: Tabela 2: Valor Pix Cartão - Total */}
+                    <tr className="hover:bg-neutral-900/40 bg-[#001726]/40">
+                      <td className="py-2.5 px-3 font-bold text-[#00f0ff] flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-[#00f0ff]" />
+                        <span>🔵 TABELA 2: VALOR PIX CARTÃO - TOTAL</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-base text-[#00f0ff] font-mono">
+                        {formatCurrency(cockpitReportData.cartaoRescisao, !showValues)}
+                      </td>
+                      <td className="py-2.5 px-3 text-neutral-300">
+                        <span className="px-1.5 py-0.5 bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 text-[10px] font-bold">
+                          FATURA VENCE EM 23/11 ({cockpitReportData.count} COMPRAS)
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-[#00f0ff] font-bold">
+                        100% paga com o dinheiro da Rescisão
+                      </td>
+                    </tr>
+
+                    {/* Linha 3: Tabela 3: Valor Pix - Rescisão */}
+                    <tr className="hover:bg-neutral-900/40">
+                      <td className="py-2.5 px-3 font-bold text-[#c084fc] flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#bd00ff] inline-block" />
+                        <span>🟣 TABELA 3: VALOR PIX - RESCISÃO</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-black text-base text-[#c084fc] font-mono">
+                        {formatCurrency(cockpitReportData.pixRescisao, !showValues)}
+                      </td>
+                      <td className="py-2.5 px-3 text-neutral-300">
+                        <span className="px-1.5 py-0.5 bg-[#bd00ff]/20 text-[#c084fc] border border-[#bd00ff]/40 text-[10px] font-bold">
+                          SEXTA 30/10 (HOMOLOGAÇÃO)
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-neutral-400">
+                        Débito direto da conta rescisória
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-[#ffe600] bg-[#120f02] font-bold">
+                      <td className="py-3 px-3 uppercase text-xs font-black text-[#ffe600]">
+                        ⚡ TOTAL GERAL DE VALORES:
+                      </td>
+                      <td className="py-3 px-3 text-right font-black font-mono text-xl text-[#ffe600]">
+                        {formatCurrency(cockpitReportData.totalGeral, !showValues)}
+                      </td>
+                      <td colSpan={2} className="py-3 px-3 text-xs text-neutral-300">
+                        {cockpitReportData.count} compras no cartão • Fatura Outubro já quitada • Fatura Novembro coberta pela rescisão
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* PAINEL DE CONFERÊNCIA: R$ 589,34 (1 corrida Uber 18/10) vs R$ 620,21 (2 corridas Uber 18/10) */}
+              <div className="bg-[#0b0c16] border-2 border-[#00f0ff]/50 p-3 text-xs space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 bg-[#00f0ff] text-black font-black text-[10px] uppercase">
+                      CONFERÊNCIA DE VALORES
+                    </span>
+                    <span className="text-white font-bold">
+                      Diferença entre R$ 589,34 e R$ 620,21 (R$ 30,87 no Uber de 18/10):
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleSetUber18Count(1)}
+                      className={`px-3 py-1.5 text-xs font-black uppercase border transition-all cursor-pointer ${
+                        cockpitReportData.countUber18_3087 <= 1
+                          ? 'border-[#00ff66] bg-[#00ff66] text-black shadow-md shadow-[#00ff66]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                      }`}
+                      title="1 corrida de R$ 30,87 no dia 18/10 (Uber corrigido dos R$ 30,80 anteriores)"
+                    >
+                      {cockpitReportData.countUber18_3087 <= 1 ? '✓ R$ 589,34 ATIVO (10 ITENS)' : 'USAR R$ 589,34 (10 ITENS)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetUber18Count(2)}
+                      className={`px-3 py-1.5 text-xs font-black uppercase border transition-all cursor-pointer ${
+                        cockpitReportData.countUber18_3087 > 1
+                          ? 'border-[#ffe600] bg-[#ffe600] text-black shadow-md shadow-[#ffe600]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                      }`}
+                      title="2 corridas de R$ 30,87 no dia 18/10"
+                    >
+                      {cockpitReportData.countUber18_3087 > 1 ? '✓ R$ 620,21 ATIVO (11 ITENS)' : 'USAR R$ 620,21 (11 ITENS)'}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-neutral-300">
+                  {cockpitReportData.countUber18_3087 <= 1 ? (
+                    <span>
+                      • <strong>R$ 589,34</strong>: Considera <strong>1 corrida Uber no dia 18/10 de R$ 30,87</strong> (ajustada dos R$ 30,80 iniciais) + Uber 18/10 de R$ 35,88 + Denis Beulmont R$ 341 + Abbey R$ 63 + demais Ubers e Chopps.
+                    </span>
+                  ) : (
+                    <span>
+                      • <strong>R$ 620,21</strong>: Considera <strong>2 corridas separadas de R$ 30,87 no dia 18/10</strong> (+ R$ 30,87 adicionados aos R$ 589,34).
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* BOTÕES DE AÇÃO E EXPANSÃO DA LISTA */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-[#00f0ff]/20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playTick();
+                    setMobileReportExpanded(!mobileReportExpanded);
+                  }}
+                  className="px-3 py-2 bg-[#00f0ff]/20 hover:bg-[#00f0ff]/30 border border-[#00f0ff] text-[#00f0ff] text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer uppercase transition-all"
+                >
+                  <span>{mobileReportExpanded ? '▲ RECOLHER LISTA DETALHADA' : `▼ VER LISTA DETALHADA (${cockpitReportData.count} LANÇAMENTOS COM VALORES EM DESTAQUE)`}</span>
+                  {mobileReportExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playTick();
+                    setActiveTab('report');
+                  }}
+                  className="px-4 py-2 bg-[#00ff66] hover:bg-[#00cc52] text-black font-black text-xs uppercase flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-[#00ff66]/20 transition-all"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>ABRIR RELATÓRIO COMPLETO COM TODAS AS AUDITORIAS (PDF)</span>
+                </button>
+              </div>
+
+              {/* LISTA EXPANDÍVEL COM OS 10 ITENS EM FORMATO DE ALTA VISIBILIDADE */}
+              {mobileReportExpanded && (
+                <div className="pt-3 border-t border-neutral-800 space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between text-xs text-neutral-300 font-bold px-1">
+                    <span className="uppercase text-[#00f0ff]">Lançamentos do Cartão auditados (Vencimento 23/11):</span>
+                    <span className="text-[#ffe600] font-black font-mono text-sm">Total: {formatCurrency(cockpitReportData.totalGeral, !showValues)}</span>
+                  </div>
+
+                  <div className="divide-y divide-neutral-800 border-2 border-neutral-700 bg-black/90">
+                    {cockpitReportData.sortedList.map((e) => (
+                      <div key={e.id} className="p-3 flex items-center justify-between gap-3 text-xs hover:bg-[#00f0ff]/10 transition-colors">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.2 bg-neutral-800 text-[#00f0ff] font-mono text-[11px] font-bold">
+                              {e.data}
+                            </span>
+                            <span className="font-black text-white text-sm">
+                              {e.descricao}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-neutral-400 flex items-center gap-2">
+                            <span className="text-[#00f0ff] font-bold">💳 CARTÃO (RESCISÃO 23/11)</span>
+                            <span>•</span>
+                            <span className={e.is_impulsive ? 'text-[#ff0055] font-bold' : 'text-[#00ff66] font-bold'}>
+                              {e.is_impulsive ? 'Lazer / Impulsivo' : 'Essencial / Transporte'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <span className="font-mono font-black text-lg sm:text-xl text-[#ffe600] bg-black px-2.5 py-1 border border-[#ffe600]/60 block shadow-md">
+                            {formatCurrency(e.valor, !showValues)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Banner de Limpeza se houver despesas no navegador do usuário */}
             {expenses.length > 0 && (
