@@ -81,7 +81,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     id: 'exp_uber17_default',
     data: '2026-10-17',
     descricao: 'Uber',
-    valor: 6.10,
+    valor: 6.30,
     metodo_pagamento: 'cartao_credito',
     categoria: 'transporte',
     is_impulsive: false,
@@ -91,14 +91,27 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
-    id: 'exp_uber18_default',
+    id: 'exp_abbey18_default',
     data: '2026-10-18',
-    descricao: 'Uber',
-    valor: 30.87,
+    descricao: 'Abbey',
+    valor: 63.00,
     metodo_pagamento: 'cartao_credito',
-    categoria: 'transporte',
+    categoria: 'outros',
     is_impulsive: false,
     timestamp: 1729252800000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_abbey18_30',
+    data: '2026-10-18',
+    descricao: 'Abbey',
+    valor: 30.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'outros',
+    is_impulsive: false,
+    timestamp: 1729260000000,
     vinculado_rescisao: true,
     fatura_mes: '2026-11',
     fatura_vencimento: '2026-11-23',
@@ -117,14 +130,14 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
-    id: 'exp_abbey18_default',
+    id: 'exp_uber18_3087',
     data: '2026-10-18',
-    descricao: 'Abbey',
-    valor: 63.00,
+    descricao: 'Uber',
+    valor: 30.87,
     metodo_pagamento: 'cartao_credito',
-    categoria: 'outros',
+    categoria: 'transporte',
     is_impulsive: false,
-    timestamp: 1729281600000,
+    timestamp: 1729270000000,
     vinculado_rescisao: true,
     fatura_mes: '2026-11',
     fatura_vencimento: '2026-11-23',
@@ -143,23 +156,10 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
-    id: 'exp_uber21_default',
-    data: '2026-10-21',
-    descricao: 'Uber',
-    valor: 30.00,
-    metodo_pagamento: 'cartao_credito',
-    categoria: 'transporte',
-    is_impulsive: false,
-    timestamp: 1729512000000,
-    vinculado_rescisao: true,
-    fatura_mes: '2026-11',
-    fatura_vencimento: '2026-11-23',
-  },
-  {
     id: 'exp_denis_beulmont_21',
     data: '2026-10-21',
-    descricao: 'Roupas Denis Beulmont',
-    valor: 341.00,
+    descricao: 'Denis roupas',
+    valor: 341.97,
     metodo_pagamento: 'cartao_credito',
     categoria: 'impulsivo',
     is_impulsive: true,
@@ -184,7 +184,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
   {
     id: 'exp_abbey22',
     data: '2026-10-22',
-    descricao: 'Abbey Chopp',
+    descricao: 'Abbey - Chopp',
     valor: 20.00,
     metodo_pagamento: 'cartao_credito',
     categoria: 'lazer_impulsivo',
@@ -197,7 +197,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
   {
     id: 'exp_abbey23',
     data: '2026-10-23',
-    descricao: 'Abbey Chopp',
+    descricao: 'Abbey - Chopp',
     valor: 20.00,
     metodo_pagamento: 'cartao_credito',
     categoria: 'lazer_impulsivo',
@@ -257,18 +257,35 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Ajusta Uber de 18/10 de 30.80 para 30.87 se necessário
+          // Atualiza Uber 17/10 de 6.10 para 6.30, Denis de 341.00 para 341.97 e Abbey 30.00 conforme nova anotação
           let updatedWithVinculo: ExpenseRecord[] = parsed.map((e) => {
             const isCartao =
               e.metodo_pagamento === 'cartao_credito' ||
               e.metodo_pagamento === 'cartao_proprio' ||
               e.metodo_pagamento === 'cartao_mae';
             let val = e.valor;
-            if (e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.80) < 0.02) {
+            let desc = e.descricao;
+            let dt = e.data;
+
+            if (dt === '2026-10-17' && desc.toLowerCase().includes('uber') && Math.abs(val - 6.10) < 0.05) {
+              val = 6.30;
+            }
+            if (dt === '2026-10-18' && desc.toLowerCase().includes('uber') && Math.abs(val - 30.80) < 0.02) {
               val = 30.87;
             }
+            if (dt === '2026-10-21' && (desc.toLowerCase().includes('denis') || desc.toLowerCase().includes('roupas')) && Math.abs(val - 341.00) < 0.05) {
+              val = 341.97;
+              desc = 'Denis roupas';
+            }
+            if (dt === '2026-10-21' && desc.toLowerCase().includes('uber') && Math.abs(val - 30.00) < 0.05) {
+              dt = '2026-10-18';
+              desc = 'Abbey';
+            }
+
             return {
               ...e,
+              data: dt,
+              descricao: desc,
               valor: val,
               vinculado_rescisao: e.vinculado_rescisao ?? isCartao,
               fatura_mes: e.fatura_mes ?? (isCartao ? '2026-11' : undefined),
@@ -276,7 +293,7 @@ export default function App() {
             };
           });
 
-          // Deduplicação da corrida de R$ 30,87 no dia 18/10 para evitar duplicidade (R$ 620,21 vs R$ 589,34)
+          // Deduplicação da corrida de R$ 30,87 no dia 18/10 para evitar duplicidade
           let seenUber18_3087 = false;
           updatedWithVinculo = updatedWithVinculo.filter((e) => {
             if (e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.87) < 0.02) {
@@ -296,7 +313,7 @@ export default function App() {
             }
           });
 
-          updatedWithVinculo.sort((a, b) => b.data.localeCompare(a.data) || b.timestamp - a.timestamp);
+          updatedWithVinculo.sort((a, b) => a.data.localeCompare(b.data) || a.timestamp - b.timestamp);
 
           localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updatedWithVinculo));
           return updatedWithVinculo;
@@ -602,47 +619,197 @@ export default function App() {
     }
   };
 
-  // Ajustar se houve 1 corrida de 30,87 (Total R$ 589,34) ou 2 corridas de 30,87 (Total R$ 620,21)
-  const handleSetUber18Count = (count: 1 | 2) => {
+  // Presets para conciliação das anotações do usuário vs sistema
+  const handleApplyPreset = (preset: 'note_chopps' | 'note_8_only' | 'prev_standard' | 'note_2_ubers') => {
     sound.playSuccess();
-    setExpenses((prev) => {
-      let filteredWithoutUber18_3087 = prev.filter(
-        (e) => !(e.data === '2026-10-18' && e.descricao.toLowerCase().includes('uber') && Math.abs(e.valor - 30.87) < 0.02)
-      );
+    let newItems: ExpenseRecord[] = [];
 
-      const baseUber18_3087: ExpenseRecord = {
-        id: 'exp_uber18_default',
+    // 10 itens com centavos exatos da nota (6,30 e 341,97) + Abbey 30,00 dia 18/10 + 2 Chopps (R$ 590,51)
+    const base10WithChopps: ExpenseRecord[] = [
+      {
+        id: 'exp_uber17_default',
+        data: '2026-10-17',
+        descricao: 'Uber',
+        valor: 6.30,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: 1729166400000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_abbey18_default',
+        data: '2026-10-18',
+        descricao: 'Abbey',
+        valor: 63.00,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'outros',
+        is_impulsive: false,
+        timestamp: 1729252800000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_abbey18_30',
+        data: '2026-10-18',
+        descricao: 'Abbey',
+        valor: 30.00,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'outros',
+        is_impulsive: false,
+        timestamp: 1729260000000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_uber18_3588',
+        data: '2026-10-18',
+        descricao: 'Uber',
+        valor: 35.88,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: 1729267200000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_uber18_3087',
         data: '2026-10-18',
         descricao: 'Uber',
         valor: 30.87,
         metodo_pagamento: 'cartao_credito',
         categoria: 'transporte',
         is_impulsive: false,
-        timestamp: 1729267200000 + 1,
+        timestamp: 1729270000000,
         vinculado_rescisao: true,
         fatura_mes: '2026-11',
         fatura_vencimento: '2026-11-23',
-      };
+      },
+      {
+        id: 'exp_uber20',
+        data: '2026-10-20',
+        descricao: 'Uber',
+        valor: 36.71,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: 1729425600000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_denis_beulmont_21',
+        data: '2026-10-21',
+        descricao: 'Denis roupas',
+        valor: 341.97,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'impulsivo',
+        is_impulsive: true,
+        timestamp: 1729555200000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_uber22',
+        data: '2026-10-22',
+        descricao: 'Uber',
+        valor: 5.78,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'transporte',
+        is_impulsive: false,
+        timestamp: 1729594800000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_abbey22',
+        data: '2026-10-22',
+        descricao: 'Abbey - Chopp',
+        valor: 20.00,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'lazer_impulsivo',
+        is_impulsive: true,
+        timestamp: 1729612800000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+      {
+        id: 'exp_abbey23',
+        data: '2026-10-23',
+        descricao: 'Abbey - Chopp',
+        valor: 20.00,
+        metodo_pagamento: 'cartao_credito',
+        categoria: 'lazer_impulsivo',
+        is_impulsive: true,
+        timestamp: 1729684800000,
+        vinculado_rescisao: true,
+        fatura_mes: '2026-11',
+        fatura_vencimento: '2026-11-23',
+      },
+    ];
 
-      const itemsToAdd = [baseUber18_3087];
-      if (count === 2) {
-        itemsToAdd.push({
-          ...baseUber18_3087,
+    if (preset === 'note_chopps') {
+      newItems = base10WithChopps;
+      showToast('✓ [TOTAL: R$ 590,51] Anotação exata (Uber 6,30 e Denis 341,97) + 2 Chopps da Abbey (20+20).');
+    } else if (preset === 'note_8_only') {
+      newItems = base10WithChopps.slice(0, 8);
+      showToast('✓ [TOTAL: R$ 550,51] 8 itens do seu arquivo de anotações (Soma exata das 8 linhas).');
+    } else if (preset === 'prev_standard') {
+      newItems = [
+        { ...base10WithChopps[0], valor: 6.10 },
+        base10WithChopps[1],
+        { ...base10WithChopps[2], data: '2026-10-21', descricao: 'Uber' },
+        base10WithChopps[3],
+        base10WithChopps[4],
+        base10WithChopps[5],
+        { ...base10WithChopps[6], valor: 341.00, descricao: 'Roupas Denis Beulmont' },
+        base10WithChopps[7],
+        base10WithChopps[8],
+        base10WithChopps[9],
+      ];
+      showToast('✓ [TOTAL: R$ 589,34] 10 itens com valores arredondados anteriores (6,10 e 341,00).');
+    } else if (preset === 'note_2_ubers') {
+      newItems = [
+        ...base10WithChopps,
+        {
           id: 'exp_uber18_3087_segunda',
+          data: '2026-10-18',
           descricao: 'Uber (2ª Corrida 18/10)',
-          timestamp: 1729267200000 + 2,
-        });
-      }
+          valor: 30.87,
+          metodo_pagamento: 'cartao_credito',
+          categoria: 'transporte',
+          is_impulsive: false,
+          timestamp: 1729270000000 + 10,
+          vinculado_rescisao: true,
+          fatura_mes: '2026-11',
+          fatura_vencimento: '2026-11-23',
+        },
+      ];
+      showToast('✓ [TOTAL: R$ 621,38] 11 itens com a 2ª corrida de R$ 30,87 no dia 18/10.');
+    }
 
-      const updated = [...filteredWithoutUber18_3087, ...itemsToAdd].sort((a, b) => b.data.localeCompare(a.data) || b.timestamp - a.timestamp);
-      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updated));
-      return updated;
-    });
+    const sorted = [...newItems].sort((a, b) => a.data.localeCompare(b.data) || a.timestamp - b.timestamp);
+    setExpenses(sorted);
+    localStorage.setItem('sentinela_expenses_v2', JSON.stringify(sorted));
+  };
 
-    if (count === 1) {
-      showToast('✓ [TOTAL: R$ 589,34] Definido para 10 compras (1 corrida Uber 18/10 de R$ 30,87).');
+  // Ajustar se houve 1 corrida de 30,87 ou 2 corridas de 30,87
+  const handleSetUber18Count = (count: 1 | 2) => {
+    sound.playSuccess();
+    if (count === 2) {
+      handleApplyPreset('note_2_ubers');
     } else {
-      showToast('✓ [TOTAL: R$ 620,21] Definido para 11 compras (2 corridas Uber 18/10 de R$ 30,87).');
+      handleApplyPreset('note_chopps');
     }
   };
 
@@ -846,55 +1013,150 @@ export default function App() {
                 </table>
               </div>
 
-              {/* PAINEL DE CONFERÊNCIA: R$ 589,34 (1 corrida Uber 18/10) vs R$ 620,21 (2 corridas Uber 18/10) */}
-              <div className="bg-[#0b0c16] border-2 border-[#00f0ff]/50 p-3 text-xs space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {/* PAINEL DE AUDITORIA DE DIVERGÊNCIAS (ARQUIVO DE ANOTAÇÕES vs SISTEMA) */}
+              <div className="bg-[#0b0c16] border-2 border-[#00f0ff] p-4 text-xs space-y-3 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 bg-[#00f0ff] text-black font-black text-[10px] uppercase">
-                      CONFERÊNCIA DE VALORES
+                    <span className="px-2 py-0.5 bg-[#00f0ff] text-black font-black text-[11px] uppercase tracking-wider">
+                      🔍 AUDITORIA DE DIVERGÊNCIAS // SEU BLOCO DE NOTAS (OUTUBRO.TXT)
                     </span>
-                    <span className="text-white font-bold">
-                      Diferença entre R$ 589,34 e R$ 620,21 (R$ 30,87 no Uber de 18/10):
+                    <span className="text-[#00ff66] font-bold text-xs">
+                      CONFERÊNCIA DETALHADA
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-neutral-400 font-mono text-[11px]">
+                    Ativo agora: <strong className="text-[#ffe600]">{formatCurrency(cockpitReportData.totalGeral, !showValues)}</strong> ({cockpitReportData.count} itens)
+                  </span>
+                </div>
+
+                {/* Explicação clara das 3 divergências encontradas */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px] text-neutral-300">
+                  <div className="p-2.5 bg-black/60 border border-neutral-700 space-y-1">
+                    <span className="font-black text-[#ffe600] uppercase block">1. Por que você calculou R$ 549,34?</span>
+                    <p className="text-neutral-400">
+                      O valor <strong>R$ 549,34</strong> é a soma dos 8 lançamentos anteriores <strong>SEM os 2 Chopps da Abbey</strong> (22/10 e 23/10 de R$ 20 cada).
+                    </p>
+                    <p className="text-[#00f0ff] font-bold">
+                      R$ 549,34 + R$ 40,00 (chopps) = R$ 589,34.
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 bg-black/60 border border-neutral-700 space-y-1">
+                    <span className="font-black text-[#ffe600] uppercase block">2. Diferença de Centavos (+R$ 1,17)</span>
+                    <p className="text-neutral-400">
+                      No seu arquivo anotado, os centavos foram corrigidos:
+                      <br />• <strong>Uber 17/10:</strong> R$ 6,30 (era 6,10 = +0,20)
+                      <br />• <strong>Denis 21/10:</strong> R$ 341,97 (era 341,00 = +0,97)
+                      <br />• <strong>Abbey 18/10:</strong> R$ 30,00 (era Uber 21/10)
+                    </p>
+                    <p className="text-[#00ff66] font-bold">
+                      Soma real das 8 linhas = R$ 550,51 (e não 549,34).
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 bg-black/60 border border-neutral-700 space-y-1">
+                    <span className="font-black text-[#ffe600] uppercase block">3. Total Real com os 2 Chopps</span>
+                    <p className="text-neutral-400">
+                      Somando os 8 itens com os centavos exatos da sua nota mais os 2 Chopps da Abbey (20+20):
+                    </p>
+                    <p className="text-[#ffe600] font-bold text-sm">
+                      R$ 550,51 + R$ 40,00 = R$ 590,51
+                    </p>
+                    <span className="text-[10px] text-neutral-400 block">(Ou R$ 621,38 se houver a 2ª corrida de 30,87)</span>
+                  </div>
+                </div>
+
+                {/* Botões Rápidos para Alternar com 1 Clique */}
+                <div className="pt-2 border-t border-neutral-800 space-y-1.5">
+                  <span className="text-[11px] font-bold text-neutral-300 block uppercase">
+                    SELECIONE QUAL TOTAL VOCÊ DESEJA APLICAR NO BANCO DE DADOS:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     <button
                       type="button"
-                      onClick={() => handleSetUber18Count(1)}
-                      className={`px-3 py-1.5 text-xs font-black uppercase border transition-all cursor-pointer ${
-                        cockpitReportData.countUber18_3087 <= 1
-                          ? 'border-[#00ff66] bg-[#00ff66] text-black shadow-md shadow-[#00ff66]/20'
-                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                      onClick={() => handleApplyPreset('note_chopps')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 590.51) < 0.05
+                          ? 'border-[#00ff66] bg-[#00ff66]/20 text-white shadow-md shadow-[#00ff66]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00ff66]'
                       }`}
-                      title="1 corrida de R$ 30,87 no dia 18/10 (Uber corrigido dos R$ 30,80 anteriores)"
+                      title="10 itens: centavos exatos (6,30 e 341,97) + Abbey 30,00 + 2 Chopps de R$ 20"
                     >
-                      {cockpitReportData.countUber18_3087 <= 1 ? '✓ R$ 589,34 ATIVO (10 ITENS)' : 'USAR R$ 589,34 (10 ITENS)'}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 590,51</span>
+                        {Math.abs(cockpitReportData.totalGeral - 590.51) < 0.05 && (
+                          <span className="text-[10px] bg-[#00ff66] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        ⭐ NOTA REAL + 2 CHOPPS (10 ITENS)
+                      </span>
                     </button>
+
                     <button
                       type="button"
-                      onClick={() => handleSetUber18Count(2)}
-                      className={`px-3 py-1.5 text-xs font-black uppercase border transition-all cursor-pointer ${
-                        cockpitReportData.countUber18_3087 > 1
-                          ? 'border-[#ffe600] bg-[#ffe600] text-black shadow-md shadow-[#ffe600]/20'
-                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white'
+                      onClick={() => handleApplyPreset('note_8_only')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 550.51) < 0.05
+                          ? 'border-[#ffe600] bg-[#ffe600]/20 text-white shadow-md shadow-[#ffe600]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#ffe600]'
                       }`}
-                      title="2 corridas de R$ 30,87 no dia 18/10"
+                      title="8 itens: exatamente as 8 linhas anotadas no arquivo outubro.txt"
                     >
-                      {cockpitReportData.countUber18_3087 > 1 ? '✓ R$ 620,21 ATIVO (11 ITENS)' : 'USAR R$ 620,21 (11 ITENS)'}
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#ffe600]">R$ 550,51</span>
+                        {Math.abs(cockpitReportData.totalGeral - 550.51) < 0.05 && (
+                          <span className="text-[10px] bg-[#ffe600] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        📄 APENAS 8 ITENS DO TXT (SEM CHOPPS)
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('prev_standard')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 589.34) < 0.05
+                          ? 'border-[#00f0ff] bg-[#00f0ff]/20 text-white shadow-md shadow-[#00f0ff]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00f0ff]'
+                      }`}
+                      title="10 itens: valores anteriores arredondados (6,10 e 341,00)"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00f0ff]">R$ 589,34</span>
+                        {Math.abs(cockpitReportData.totalGeral - 589.34) < 0.05 && (
+                          <span className="text-[10px] bg-[#00f0ff] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        🔄 VALORES ANTERIORES (10 ITENS)
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('note_2_ubers')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 621.38) < 0.05
+                          ? 'border-[#c084fc] bg-[#c084fc]/20 text-white shadow-md shadow-[#c084fc]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#c084fc]'
+                      }`}
+                      title="11 itens: nota real + chopps + 2ª corrida Uber 30,87"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#c084fc]">R$ 621,38</span>
+                        {Math.abs(cockpitReportData.totalGeral - 621.38) < 0.05 && (
+                          <span className="text-[10px] bg-[#c084fc] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        🚗 COM 2º UBER 30,87 (11 ITENS)
+                      </span>
                     </button>
                   </div>
                 </div>
-                <p className="text-[11px] text-neutral-300">
-                  {cockpitReportData.countUber18_3087 <= 1 ? (
-                    <span>
-                      • <strong>R$ 589,34</strong>: Considera <strong>1 corrida Uber no dia 18/10 de R$ 30,87</strong> (ajustada dos R$ 30,80 iniciais) + Uber 18/10 de R$ 35,88 + Denis Beulmont R$ 341 + Abbey R$ 63 + demais Ubers e Chopps.
-                    </span>
-                  ) : (
-                    <span>
-                      • <strong>R$ 620,21</strong>: Considera <strong>2 corridas separadas de R$ 30,87 no dia 18/10</strong> (+ R$ 30,87 adicionados aos R$ 589,34).
-                    </span>
-                  )}
-                </p>
               </div>
 
               {/* BOTÕES DE AÇÃO E EXPANSÃO DA LISTA */}
