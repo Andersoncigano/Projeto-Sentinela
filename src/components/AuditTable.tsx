@@ -27,6 +27,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'impulsive' | 'cartao' | 'pix' | 'pix_rescisao' | 'rescisao_vinculado' | 'essential'>('all');
   const [filterMonthOnly, setFilterMonthOnly] = useState<boolean>(true);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Escutar a tecla ESC para fechar a tela cheia
   useEffect(() => {
@@ -75,6 +76,17 @@ export const AuditTable: React.FC<AuditTableProps> = ({
     if (filterType === 'essential') return !e.is_impulsive;
     return true;
   });
+
+  // Ordenação estrita das datas (padrão: ordem cronológica do dia 17/10 para 23/10)
+  const sortedList = React.useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const cmp = a.data.localeCompare(b.data);
+      if (cmp !== 0) {
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+      return sortDirection === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+    });
+  }, [filtered, sortDirection]);
 
   // Estatísticas calculadas sobre os registros filtrados
   const totalGeral = filtered.reduce((acc, curr) => acc + curr.valor, 0);
@@ -131,11 +143,23 @@ export const AuditTable: React.FC<AuditTableProps> = ({
           {/* VISUALIZAÇÃO EM CARTÕES PARA CELULARES (ALTA VISIBILIDADE EM TELAS PEQUENAS) */}
           <div className="block md:hidden space-y-2.5">
             <div className="flex items-center justify-between text-[11px] text-neutral-400 font-bold px-1">
-              <span>LISTA DE LANÇAMENTOS ({filtered.length} ITENS):</span>
-              <span className="text-[#ffe600] font-black">TOTAL: {formatCurrency(totalGeral, !showValues)}</span>
+              <span className="text-[#00f0ff]">
+                ORDEM CRONOLÓGICA ({sortedList.length} ITENS):
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playTick();
+                  setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                }}
+                className="px-2 py-0.5 border border-[#00f0ff] bg-[#00f0ff]/10 text-[#00f0ff] hover:bg-[#00f0ff] hover:text-black text-[10px] font-black uppercase cursor-pointer"
+                title="Inverter ordem das datas"
+              >
+                {sortDirection === 'asc' ? '▲ 17/10 → 23/10' : '▼ 23/10 → 17/10'}
+              </button>
             </div>
 
-            {filtered.map((item) => {
+            {sortedList.map((item) => {
               const isCard = item.metodo_pagamento === 'cartao_credito' || 
                              item.metodo_pagamento === 'cartao_proprio' || 
                              item.metodo_pagamento === 'cartao_mae';
@@ -148,7 +172,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] text-[#00f0ff] font-mono block">{item.data}</span>
+                      <span className="text-[10px] text-[#00f0ff] font-mono block font-bold">{item.data}</span>
                       <h4 className="text-sm font-black text-white mt-0.5">{item.descricao}</h4>
                     </div>
 
@@ -199,7 +223,19 @@ export const AuditTable: React.FC<AuditTableProps> = ({
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b-2 border-neutral-700 text-[11px] text-neutral-300 uppercase tracking-widest bg-black sticky top-0 z-10 font-bold">
-                  <th className="py-3 px-3">DATA</th>
+                  <th 
+                    onClick={() => {
+                      sound.playTick();
+                      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                    }}
+                    className="py-3 px-3 cursor-pointer hover:text-[#00f0ff] transition-colors select-none"
+                    title="Clique para inverter ordem cronológica das datas"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>DATA</span>
+                      <span className="text-[#00f0ff] font-mono text-[11px] font-black">{sortDirection === 'asc' ? '▲ 17→23' : '▼ 23→17'}</span>
+                    </div>
+                  </th>
                   <th className="py-3 px-3">DESCRIÇÃO / ESTABELECIMENTO</th>
                   <th className="py-3 px-3 text-right">VALOR DO GASTO</th>
                   <th className="py-3 px-3">MÉTODO DE PAGAMENTO</th>
@@ -208,14 +244,14 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800 bg-[#02050c]">
-                {filtered.map((item) => (
+                {sortedList.map((item) => (
                   <tr
                     key={item.id}
                     className={`hover:bg-[#00f0ff]/10 transition-colors ${
                       item.is_impulsive ? 'bg-[#1a0208]/30' : ''
                     }`}
                   >
-                    <td className="py-3 px-3 text-neutral-300 whitespace-nowrap font-mono text-xs">
+                    <td className="py-3 px-3 text-neutral-300 whitespace-nowrap font-mono text-xs font-bold">
                       {item.data}
                     </td>
                     <td className="py-3 px-3 font-black text-white text-sm">
@@ -464,6 +500,19 @@ export const AuditTable: React.FC<AuditTableProps> = ({
             {filterMonthOnly ? `MÊS ATIVO (${selectedMonth})` : 'TODOS OS MESES'}
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => {
+            sound.playTick();
+            setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+          }}
+          className="px-2.5 py-0.5 border border-[#00f0ff] bg-[#00f0ff]/10 hover:bg-[#00f0ff] hover:text-black text-[#00f0ff] text-[10px] uppercase font-black cursor-pointer transition-all flex items-center gap-1"
+          title="Alternar ordenação cronológica das datas"
+        >
+          <span>📅 ORDEM:</span>
+          <span>{sortDirection === 'asc' ? '▲ 17/10 → 23/10 (CRONOLÓGICA)' : '▼ 23/10 → 17/10 (RECENTES)'}</span>
+        </button>
       </div>
     </div>
   );
