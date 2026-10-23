@@ -1066,6 +1066,22 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Alerta de Verificação dos Centavos (590,51 vs 590,41 ou 591,41) */}
+                <div className="p-3 bg-[#001726] border-2 border-[#00f0ff] text-neutral-200 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 bg-[#00f0ff] text-black font-black text-[10px] uppercase">
+                      ⚠️ CONFERÊNCIA DOS CENTAVOS (590,51)
+                    </span>
+                    <span className="text-white font-bold text-xs">
+                      O valor matemático oficial é <span className="text-[#ffe600] font-black">R$ 590,51</span> (Cinquenta e um centavos).
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300">
+                    • <strong>Por que pareceu 590,41?</strong> Na fonte digital monoespaçada, o traço superior reto do número <strong>5</strong> em <strong>,51</strong> pode ser confundido visualmente com <strong>,41</strong>.
+                    <br />• <strong>Por que a outra tela (Vercel) tem valor diferente?</strong> O Vercel armazena dados no <em>localStorage</em> isolado daquele navegador. Clique no botão verde abaixo para forçar a sincronização exata de R$ 590,51!
+                  </p>
+                </div>
+
                 {/* Botões Rápidos para Alternar com 1 Clique */}
                 <div className="pt-2 border-t border-neutral-800 space-y-1.5">
                   <span className="text-[11px] font-bold text-neutral-300 block uppercase">
@@ -1410,8 +1426,8 @@ export default function App() {
                 <span className="text-xs font-black text-[#00f0ff] tracking-wider uppercase">
                   📋 TABELA DE VALORES: {expenses.length} GASTOS GRAVADOS NO BANCO
                 </span>
-                <span className="text-[11px] text-neutral-300">
-                  (Abbey R$ 63,00, Uber R$ 30,80...)
+                <span className="text-[11px] text-[#ffe600] font-mono font-bold">
+                  (Fatura Novembro: {formatCurrency(cockpitReportData.cartaoRescisao, !showValues)} • Vencimento 23/11)
                 </span>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">

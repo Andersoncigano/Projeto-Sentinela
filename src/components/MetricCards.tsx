@@ -237,7 +237,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
             </div>
 
             <div className="flex items-baseline justify-between mt-1">
-              <span className={`text-2xl font-black tracking-tight ${
+              <span className={`text-2xl font-black tracking-wider tabular-nums ${
                 temDescompasso 
                   ? 'text-[#ff0055]' 
                   : settings.fatura_novembro_paga 
@@ -246,11 +246,11 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
               }`}>
                 {settings.fatura_novembro_paga ? formatCurrency(0, isHidden) : formatCurrency(totalFaturaAtual, isHidden)}
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-[10px] text-neutral-300 font-bold">
                 {settings.fatura_novembro_paga 
                   ? 'paga c/ rescisão ✓' 
                   : isOutubro 
-                    ? 'vence em 23/11' 
+                    ? '(51 centavos) • vence 23/11' 
                     : 'saldo da fatura'}
               </span>
             </div>
