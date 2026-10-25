@@ -3,12 +3,14 @@ import { Trash2, Search, Database, Maximize2, Minimize2, ArrowLeft, Filter, Laye
 import { ExpenseRecord } from '../types/sentinela';
 import { sound } from '../lib/sound';
 import { formatCurrency } from '../lib/format';
+import { anonymizeMerchant } from '../lib/privacy';
 
 interface AuditTableProps {
   expenses: ExpenseRecord[];
   onDeleteExpense: (id: string) => void;
   selectedMonth?: string;
   showValues?: boolean;
+  isStealth?: boolean;
   onRestoreDefaults?: () => void;
   onOpenReport?: () => void;
   onToggleVinculoRescisao?: (id: string) => void;
@@ -19,6 +21,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
   onDeleteExpense,
   selectedMonth,
   showValues = true,
+  isStealth = false,
   onRestoreDefaults,
   onOpenReport,
   onToggleVinculoRescisao,
@@ -134,7 +137,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({
               onClick={onRestoreDefaults}
               className="mt-4 px-4 py-2 bg-[#00ff66] hover:bg-[#33ff88] text-black font-black text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-[#00ff66]/30 transition-all active:scale-95 inline-flex items-center gap-2"
             >
-              <span>📥 CARREGAR GASTOS REAIS (ABBEY + UBER)</span>
+              <span>📥 CARREGAR GASTOS REAIS (15 LANÇAMENTOS - R$ 661,45)</span>
             </button>
           )}
         </div>
@@ -255,7 +258,14 @@ export const AuditTable: React.FC<AuditTableProps> = ({
                       {item.data}
                     </td>
                     <td className="py-3 px-3 font-black text-white text-sm">
-                      {item.descricao}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{anonymizeMerchant(item.descricao, isStealth)}</span>
+                        {isStealth && (
+                          <span className="px-1 py-0.2 bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[#00f0ff] text-[9px] font-mono tracking-tight font-normal">
+                            STEALTH
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-3 font-mono font-black text-[#ffe600] whitespace-nowrap text-base text-right">
                       <span className="px-2 py-0.5 bg-black/80 border border-[#ffe600]/40 rounded-sm">

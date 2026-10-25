@@ -22,6 +22,7 @@ import {
 import { ExpenseRecord, DebtRecord, SystemSettings, BurnRateMetrics } from '../types/sentinela';
 import { formatCurrency } from '../lib/format';
 import { sound } from '../lib/sound';
+import { anonymizeMerchant } from '../lib/privacy';
 
 interface MonthlyReportViewProps {
   expenses: ExpenseRecord[];
@@ -32,6 +33,7 @@ interface MonthlyReportViewProps {
   onSelectMonth: (month: string) => void;
   availableMonths: string[];
   showValues: boolean;
+  isStealth?: boolean;
   onBackToCockpit?: () => void;
 }
 
@@ -46,6 +48,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   onSelectMonth,
   availableMonths,
   showValues,
+  isStealth = false,
   onBackToCockpit,
 }) => {
   const isHidden = !showValues;
@@ -870,7 +873,14 @@ ${filteredExpenses.map(e => `   • ${e.data} | R$ ${e.valor.toFixed(2).padStart
                           {e.data}
                         </td>
                         <td className="py-2 px-3 font-bold text-white print:text-black">
-                          {e.descricao}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{anonymizeMerchant(e.descricao, isStealth)}</span>
+                            {isStealth && (
+                              <span className="px-1 py-0.2 bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[#00f0ff] text-[9px] font-mono tracking-tight font-normal print:hidden">
+                                STEALTH
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-2 px-3 whitespace-nowrap">
                           {isPixRescisao ? (

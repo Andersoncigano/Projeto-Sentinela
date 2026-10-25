@@ -2,7 +2,7 @@
  * Formata um valor numérico em moeda brasileira (BRL),
  * ou retorna 'R$ •••••' caso o modo de privacidade esteja ativo (isHidden = true).
  */
-export function formatCurrency(value: number, isHidden: boolean): string {
+export function formatCurrency(value: number, isHidden: boolean = false): string {
   if (isHidden) {
     return 'R$ •••••';
   }

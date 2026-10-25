@@ -19,6 +19,9 @@ import { DualScaleTracker } from './components/DualScaleTracker';
 import { NoteBatchImporterModal } from './components/NoteBatchImporterModal';
 import { MonthlyReportView } from './components/MonthlyReportView';
 import { SystemTransitionTracker } from './components/SystemTransitionTracker';
+import { TerminalLockScreen } from './components/TerminalLockScreen';
+import { PrivacyProtectionModal } from './components/PrivacyProtectionModal';
+import { PrivacySettings, DEFAULT_PRIVACY_SETTINGS, anonymizeMerchant } from './lib/privacy';
 
 import {
   ExpenseRecord,
@@ -182,6 +185,19 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_vencimento: '2026-11-23',
   },
   {
+    id: 'exp_uber22_558',
+    data: '2026-10-22',
+    descricao: 'Uber',
+    valor: 5.58,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729598400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
     id: 'exp_abbey22',
     data: '2026-10-22',
     descricao: 'Abbey - Chopp',
@@ -203,6 +219,58 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     categoria: 'lazer_impulsivo',
     is_impulsive: true,
     timestamp: 1729684800000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_lord_uber23',
+    data: '2026-10-23',
+    descricao: 'Lord - Uber',
+    valor: 12.98,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729688400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_lord23',
+    data: '2026-10-23',
+    descricao: 'Lord',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1729692000000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber24',
+    data: '2026-10-24',
+    descricao: 'Uber',
+    valor: 12.38,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729771200000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_abbey24',
+    data: '2026-10-24',
+    descricao: 'Abbey - Chopp',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1729774800000,
     vinculado_rescisao: true,
     fatura_mes: '2026-11',
     fatura_vencimento: '2026-11-23',
@@ -343,6 +411,36 @@ export default function App() {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
+  // Motor Avançado de Proteção & Camuflagem (Olho Mágico, Modo Stealth e Cofre Terminal)
+  const [privacy, setPrivacy] = useState<PrivacySettings>(() => {
+    const saved = localStorage.getItem('sentinela_privacy_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_PRIVACY_SETTINGS, ...parsed };
+      } catch {
+        return DEFAULT_PRIVACY_SETTINGS;
+      }
+    }
+    return DEFAULT_PRIVACY_SETTINGS;
+  });
+
+  // Estado do Cofre Bloqueado por PIN
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sentinela_privacy_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Boolean(parsed.pinEnabled && parsed.pinHash);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+
   const [pendingFrictionExpense, setPendingFrictionExpense] = useState<ExpenseRecord | null>(null);
   const [terminalInput, setTerminalInput] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -406,20 +504,34 @@ export default function App() {
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(expenses));
   }, [expenses]);
 
-  // Garante sincronização imediata no navegador caso o storage local anterior estivesse vazio
+  // Garante sincronização imediata no navegador caso o storage local anterior estivesse vazio ou faltando novos itens
   useEffect(() => {
-    const saved = localStorage.getItem('sentinela_expenses_v2');
-    if (!saved || saved === '[]') {
-      setExpenses(DEFAULT_INITIAL_EXPENSES);
-      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
-    }
+    setExpenses((current) => {
+      let changed = false;
+      const updated = [...current];
+      DEFAULT_INITIAL_EXPENSES.forEach((def) => {
+        const exists = updated.some(
+          (e) => e.id === def.id || (e.data === def.data && Math.abs(e.valor - def.valor) < 0.01 && e.descricao.trim().toLowerCase() === def.descricao.trim().toLowerCase())
+        );
+        if (!exists) {
+          updated.push(def);
+          changed = true;
+        }
+      });
+      if (changed || current.length === 0) {
+        updated.sort((a, b) => a.data.localeCompare(b.data) || a.timestamp - b.timestamp);
+        localStorage.setItem('sentinela_expenses_v2', JSON.stringify(updated));
+        return updated;
+      }
+      return current;
+    });
   }, []);
 
   const handleRestoreDefaultExpenses = () => {
     sound.playSuccess();
     setExpenses(DEFAULT_INITIAL_EXPENSES);
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
-    showToast('📥 [DESPESAS_CARREGADAS] Abbey (R$ 63), Uber 18/10 (R$ 30,80) e Uber 21/10 (R$ 30,00) sincronizadas!');
+    showToast('📥 [DESPESAS_CARREGADAS] 15 despesas de Outubro (R$ 661,45) sincronizadas com sucesso!');
   };
 
   const handleToggleVinculoRescisao = (id: string) => {
@@ -447,6 +559,10 @@ export default function App() {
   }, [showValues]);
 
   useEffect(() => {
+    localStorage.setItem('sentinela_privacy_settings', JSON.stringify(privacy));
+  }, [privacy]);
+
+  useEffect(() => {
     localStorage.setItem('sentinela_selected_month', selectedMonth);
   }, [selectedMonth]);
 
@@ -455,17 +571,121 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Alterna o estado global de visibilidade de valores
-  const handleToggleShowValues = () => {
-    setShowValues((prev) => {
-      const next = !prev;
-      showToast(
-        next
-          ? '👁️ [MODO_PRIVACIDADE_DESATIVADO] Valores visíveis.'
-          : '👁️ [MODO_PRIVACIDADE_ATIVADO] Renda e todos os valores sensíveis ocultos.'
-      );
+  // Temporizador de Inatividade para Bloqueio Automático por PIN
+  useEffect(() => {
+    if (!privacy.pinEnabled || privacy.autoLockMinutes <= 0 || isLocked) return;
+
+    let lastInteraction = Date.now();
+
+    const handleUserActivity = () => {
+      lastInteraction = Date.now();
+    };
+
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('mousedown', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('touchstart', handleUserActivity);
+
+    const interval = setInterval(() => {
+      const elapsedMinutes = (Date.now() - lastInteraction) / (1000 * 60);
+      if (elapsedMinutes >= privacy.autoLockMinutes) {
+        setIsLocked(true);
+        sound.playFrictionAlert();
+        showToast('🔒 [AUTO_LOCK] Terminal bloqueado por inatividade para sua segurança.');
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('mousedown', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('touchstart', handleUserActivity);
+      clearInterval(interval);
+    };
+  }, [privacy.pinEnabled, privacy.autoLockMinutes, isLocked]);
+
+  // Atualizar configurações de privacidade
+  const handleUpdatePrivacy = (newVals: Partial<PrivacySettings>) => {
+    setPrivacy((prev) => {
+      const next = { ...prev, ...newVals };
+      if (newVals.isMasked !== undefined) {
+        setShowValues(!newVals.isMasked);
+      }
       return next;
     });
+  };
+
+  // Alterna o Modo Olho Mágico (Máscara de Valores)
+  const handleToggleMask = () => {
+    const nextMask = !privacy.isMasked;
+    handleUpdatePrivacy({ isMasked: nextMask });
+    showToast(
+      nextMask
+        ? '👁️ [MODO_MÁSCARA_ATIVADO] Todos os números e valores sensíveis ocultos.'
+        : '👁️ [MODO_MÁSCARA_DESATIVADO] Valores visíveis.'
+    );
+  };
+
+  // Alterna o estado global de visibilidade de valores (legado compatível)
+  const handleToggleShowValues = () => {
+    handleToggleMask();
+  };
+
+  // Alterna o Modo Stealth (Codinomes Comerciais)
+  const handleToggleStealth = () => {
+    const nextStealth = !privacy.isStealth;
+    handleUpdatePrivacy({ isStealth: nextStealth });
+    showToast(
+      nextStealth
+        ? '🎭 [MODO_STEALTH_ATIVADO] Estabelecimentos reais camuflados com codinomes técnicos!'
+        : '🎭 [MODO_STEALTH_DESATIVADO] Nomes originais exibidos.'
+    );
+  };
+
+  // Bloquear terminal imediatamente
+  const handleLockTerminalNow = () => {
+    if (privacy.pinEnabled) {
+      setIsLocked(true);
+      showToast('🔒 [TERMINAL_TRANCADO] Cofre bloqueado.');
+    } else {
+      setIsPrivacyModalOpen(true);
+      showToast('⚠️ Configure um PIN primeiro na Central de Proteção.');
+    }
+  };
+
+  // Desbloquear terminal
+  const handleUnlockTerminal = () => {
+    setIsLocked(false);
+    showToast('✓ [ACESSO_AUTORIZADO] Terminal liberado com sucesso.');
+  };
+
+  // Protocolo de Pânico: Incineração total do armazenamento local
+  const handlePanicPurge = () => {
+    sound.playSuccess();
+    localStorage.clear();
+    setExpenses([]);
+    setDebts([]);
+    setSettings(DEFAULT_SETTINGS);
+    setPrivacy(DEFAULT_PRIVACY_SETTINGS);
+    setIsLocked(false);
+    showToast('🚨 [PROTOCOLO_PÂNICO] Todos os dados e chaves foram incinerados do navegador.');
+  };
+
+  // Restauração de cofre completo
+  const handleRestoreAllData = (backup: { expenses: ExpenseRecord[]; debts: DebtRecord[]; settings: SystemSettings }) => {
+    if (backup.expenses && Array.isArray(backup.expenses)) {
+      setExpenses(backup.expenses);
+      localStorage.setItem('sentinela_expenses_v2', JSON.stringify(backup.expenses));
+    }
+    if (backup.debts && Array.isArray(backup.debts)) {
+      setDebts(backup.debts);
+      localStorage.setItem('sentinela_debts', JSON.stringify(backup.debts));
+    }
+    if (backup.settings) {
+      setSettings(backup.settings);
+      localStorage.setItem('sentinela_settings', JSON.stringify(backup.settings));
+    }
+    showToast('✓ [COFRE_RESTAURADO] Banco de dados e configurações importados!');
   };
 
   // Meses disponíveis no banco de dados (Setembro, Outubro, Novembro e Dezembro / 2026)
@@ -620,147 +840,21 @@ export default function App() {
   };
 
   // Presets para conciliação das anotações do usuário vs sistema
-  const handleApplyPreset = (preset: 'note_chopps' | 'note_8_only' | 'prev_standard' | 'note_2_ubers') => {
+  const handleApplyPreset = (preset: 'atual_15_itens' | 'note_chopps' | 'note_8_only' | 'prev_standard' | 'note_2_ubers') => {
     sound.playSuccess();
     let newItems: ExpenseRecord[] = [];
 
     // 10 itens com centavos exatos da nota (6,30 e 341,97) + Abbey 30,00 dia 18/10 + 2 Chopps (R$ 590,51)
-    const base10WithChopps: ExpenseRecord[] = [
-      {
-        id: 'exp_uber17_default',
-        data: '2026-10-17',
-        descricao: 'Uber',
-        valor: 6.30,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'transporte',
-        is_impulsive: false,
-        timestamp: 1729166400000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_abbey18_default',
-        data: '2026-10-18',
-        descricao: 'Abbey',
-        valor: 63.00,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'outros',
-        is_impulsive: false,
-        timestamp: 1729252800000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_abbey18_30',
-        data: '2026-10-18',
-        descricao: 'Abbey',
-        valor: 30.00,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'outros',
-        is_impulsive: false,
-        timestamp: 1729260000000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_uber18_3588',
-        data: '2026-10-18',
-        descricao: 'Uber',
-        valor: 35.88,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'transporte',
-        is_impulsive: false,
-        timestamp: 1729267200000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_uber18_3087',
-        data: '2026-10-18',
-        descricao: 'Uber',
-        valor: 30.87,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'transporte',
-        is_impulsive: false,
-        timestamp: 1729270000000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_uber20',
-        data: '2026-10-20',
-        descricao: 'Uber',
-        valor: 36.71,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'transporte',
-        is_impulsive: false,
-        timestamp: 1729425600000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_denis_beulmont_21',
-        data: '2026-10-21',
-        descricao: 'Denis roupas',
-        valor: 341.97,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'impulsivo',
-        is_impulsive: true,
-        timestamp: 1729555200000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_uber22',
-        data: '2026-10-22',
-        descricao: 'Uber',
-        valor: 5.78,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'transporte',
-        is_impulsive: false,
-        timestamp: 1729594800000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_abbey22',
-        data: '2026-10-22',
-        descricao: 'Abbey - Chopp',
-        valor: 20.00,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'lazer_impulsivo',
-        is_impulsive: true,
-        timestamp: 1729612800000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-      {
-        id: 'exp_abbey23',
-        data: '2026-10-23',
-        descricao: 'Abbey - Chopp',
-        valor: 20.00,
-        metodo_pagamento: 'cartao_credito',
-        categoria: 'lazer_impulsivo',
-        is_impulsive: true,
-        timestamp: 1729684800000,
-        vinculado_rescisao: true,
-        fatura_mes: '2026-11',
-        fatura_vencimento: '2026-11-23',
-      },
-    ];
+    const base10WithChopps: ExpenseRecord[] = DEFAULT_INITIAL_EXPENSES.filter(
+      (e) => !['exp_uber22_558', 'exp_lord_uber23', 'exp_lord23', 'exp_uber24', 'exp_abbey24'].includes(e.id)
+    );
 
-    if (preset === 'note_chopps') {
+    if (preset === 'atual_15_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES;
+      showToast('✓ [TOTAL: R$ 661,45] 15 lançamentos oficiais consolidados (incluindo 22/10, 23/10 e 24/10)!');
+    } else if (preset === 'note_chopps') {
       newItems = base10WithChopps;
-      showToast('✓ [TOTAL: R$ 590,51] Anotação exata (Uber 6,30 e Denis 341,97) + 2 Chopps da Abbey (20+20).');
+      showToast('✓ [TOTAL: R$ 590,51] 10 itens anteriores (Uber 6,30 e Denis 341,97) + 2 Chopps da Abbey.');
     } else if (preset === 'note_8_only') {
       newItems = base10WithChopps.slice(0, 8);
       showToast('✓ [TOTAL: R$ 550,51] 8 itens do seu arquivo de anotações (Soma exata das 8 linhas).');
@@ -865,6 +959,13 @@ export default function App() {
         setCrtEnabled={setCrtEnabled}
         showValues={showValues}
         onToggleShowValues={handleToggleShowValues}
+        isMasked={privacy.isMasked}
+        onToggleMask={handleToggleMask}
+        isStealth={privacy.isStealth}
+        onToggleStealth={handleToggleStealth}
+        pinEnabled={privacy.pinEnabled}
+        onLockTerminalNow={handleLockTerminalNow}
+        onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
       />
 
       {/* Main Cockpit Space */}
@@ -1087,7 +1188,27 @@ export default function App() {
                   <span className="text-[11px] font-bold text-neutral-300 block uppercase">
                     SELECIONE QUAL TOTAL VOCÊ DESEJA APLICAR NO BANCO DE DADOS:
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_15_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 661.45) < 0.05
+                          ? 'border-[#00ff66] bg-[#00ff66]/20 text-white shadow-md shadow-[#00ff66]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00ff66]'
+                      }`}
+                      title="15 itens: todos os lançamentos atualizados (incluindo 22/10, 23/10 e 24/10)"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 661,45</span>
+                        {Math.abs(cockpitReportData.totalGeral - 661.45) < 0.05 && (
+                          <span className="text-[10px] bg-[#00ff66] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        ⭐ 15 ITENS (ATUALIZADO 24/10)
+                      </span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleApplyPreset('note_chopps')}
@@ -1218,9 +1339,16 @@ export default function App() {
                             <span className="px-1.5 py-0.2 bg-neutral-800 text-[#00f0ff] font-mono text-[11px] font-bold">
                               {e.data}
                             </span>
-                            <span className="font-black text-white text-sm">
-                              {e.descricao}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-black text-white text-sm">
+                                {anonymizeMerchant(e.descricao, privacy.isStealth)}
+                              </span>
+                              {privacy.isStealth && (
+                                <span className="px-1 py-0.2 bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[#00f0ff] text-[9px] font-mono tracking-tight font-normal">
+                                  STEALTH
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="text-[11px] text-neutral-400 flex items-center gap-2">
                             <span className="text-[#00f0ff] font-bold">💳 CARTÃO (RESCISÃO 23/11)</span>
@@ -1493,6 +1621,7 @@ export default function App() {
                 onDeleteExpense={handleDeleteExpense}
                 selectedMonth={selectedMonth}
                 showValues={showValues}
+                isStealth={privacy.isStealth}
                 onRestoreDefaults={handleRestoreDefaultExpenses}
                 onOpenReport={() => setActiveTab('report')}
                 onToggleVinculoRescisao={handleToggleVinculoRescisao}
@@ -1553,6 +1682,7 @@ export default function App() {
               onDeleteExpense={handleDeleteExpense}
               selectedMonth={selectedMonth}
               showValues={showValues}
+              isStealth={privacy.isStealth}
               onRestoreDefaults={handleRestoreDefaultExpenses}
               onOpenReport={() => setActiveTab('report')}
               onToggleVinculoRescisao={handleToggleVinculoRescisao}
@@ -1572,6 +1702,7 @@ export default function App() {
               onSelectMonth={setSelectedMonth}
               availableMonths={availableMonths}
               showValues={showValues}
+              isStealth={privacy.isStealth}
               onBackToCockpit={() => setActiveTab('cockpit')}
             />
           </div>
@@ -1593,6 +1724,29 @@ export default function App() {
         onClose={() => setIsNoteImporterOpen(false)}
         onImportExpenses={handleImportBatchExpenses}
         currentSelectedMonth={selectedMonth}
+      />
+
+      {/* Terminal Lock Screen Overlay */}
+      {isLocked && privacy.pinEnabled && privacy.pinHash && (
+        <TerminalLockScreen
+          pinHash={privacy.pinHash}
+          onUnlock={handleUnlockTerminal}
+          onPanicPurge={handlePanicPurge}
+        />
+      )}
+
+      {/* Central de Proteção e Privacidade */}
+      <PrivacyProtectionModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        privacy={privacy}
+        onUpdatePrivacy={handleUpdatePrivacy}
+        expenses={expenses}
+        debts={debts}
+        settings={settings}
+        onRestoreAllData={handleRestoreAllData}
+        onPanicPurge={handlePanicPurge}
+        onLockTerminalNow={handleLockTerminalNow}
       />
 
       {/* Footer */}

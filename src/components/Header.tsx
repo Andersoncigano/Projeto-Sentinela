@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   Database,
-  FileText
+  FileText,
+  Lock
 } from 'lucide-react';
 import { BurnRateMetrics, SystemSettings } from '../types/sentinela';
 import { sound } from '../lib/sound';
@@ -31,6 +32,13 @@ interface HeaderProps {
   setCrtEnabled: (val: boolean) => void;
   showValues: boolean;
   onToggleShowValues: () => void;
+  isMasked?: boolean;
+  onToggleMask?: () => void;
+  isStealth?: boolean;
+  onToggleStealth?: () => void;
+  pinEnabled?: boolean;
+  onLockTerminalNow?: () => void;
+  onOpenPrivacyModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,6 +52,13 @@ export const Header: React.FC<HeaderProps> = ({
   setCrtEnabled,
   showValues,
   onToggleShowValues,
+  isMasked = false,
+  onToggleMask,
+  isStealth = false,
+  onToggleStealth,
+  pinEnabled = false,
+  onLockTerminalNow,
+  onOpenPrivacyModal,
 }) => {
   const toggleSound = () => {
     const next = !isMuted;
@@ -198,25 +213,82 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </button>
 
-            {/* Privacy Mode Toggle: MOSTRAR RENDA / OCULTAR RENDA */}
+            {/* Botão Central de Proteção & Auditoria */}
             <button
-              onClick={handleToggleValues}
-              className={`px-3 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
-                showValues
-                  ? 'border-[#ffe600]/70 bg-black text-[#ffe600] hover:bg-[#ffe600]/20'
-                  : 'border-[#ffe600] bg-[#ffe600] text-black neon-glow-yellow'
-              }`}
-              title={showValues ? 'Ocultar renda e valores sensíveis' : 'Mostrar renda e valores sensíveis'}
+              type="button"
+              onClick={() => {
+                sound.playTick();
+                onOpenPrivacyModal?.();
+              }}
+              className="px-2.5 py-1.5 border border-[#00f0ff] bg-[#00f0ff]/10 hover:bg-[#00f0ff]/25 text-[#00f0ff] text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-sm shadow-[#00f0ff]/20"
+              title="Abrir Central de Proteção, Camuflagem e Cofre"
             >
-              {showValues ? (
-                <Eye className="w-4 h-4 text-[#ffe600]" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-black" />
+              <Shield className="w-3.5 h-3.5 text-[#00f0ff]" />
+              <span className="text-[11px] uppercase tracking-wider hidden sm:inline">PROTEÇÃO & PRIVACIDADE</span>
+              <span className="text-[11px] uppercase tracking-wider sm:hidden">PROTEÇÃO</span>
+              {(isMasked || isStealth || pinEnabled) && (
+                <span className="w-2 h-2 rounded-full bg-[#00ff66] animate-pulse" />
               )}
+            </button>
+
+            {/* Quick Toggle: Modo Olho Mágico (Máscara de Números) */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playTick();
+                if (onToggleMask) {
+                  onToggleMask();
+                } else {
+                  handleToggleValues();
+                }
+              }}
+              className={`px-2.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
+                isMasked
+                  ? 'border-[#ffe600] bg-[#ffe600] text-black neon-glow-yellow'
+                  : 'border-neutral-700 bg-black text-[#ffe600] hover:bg-[#ffe600]/20'
+              }`}
+              title={isMasked ? 'Desativar máscara de números (mostrar valores)' : 'Ativar máscara de números (R$ •••••)'}
+            >
+              {isMasked ? <EyeOff className="w-3.5 h-3.5 text-black" /> : <Eye className="w-3.5 h-3.5 text-[#ffe600]" />}
               <span className="text-[11px] uppercase tracking-wider">
-                {showValues ? 'OCULTAR RENDA' : 'MOSTRAR RENDA'}
+                {isMasked ? 'MÁSCARA: ON' : 'MÁSCARA'}
               </span>
             </button>
+
+            {/* Quick Toggle: Modo Stealth (Codinomes Comerciais) */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playTick();
+                onToggleStealth?.();
+              }}
+              className={`px-2.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 cursor-pointer font-bold ${
+                isStealth
+                  ? 'border-[#00f0ff] bg-[#00f0ff] text-black neon-glow-cyan'
+                  : 'border-neutral-700 bg-black text-[#00f0ff] hover:bg-[#00f0ff]/20'
+              }`}
+              title={isStealth ? 'Desativar Modo Stealth (mostrar nomes reais)' : 'Ativar Modo Stealth (camuflar nomes Denis/Abbey/Lord/Uber)'}
+            >
+              <span className="text-[11px] uppercase tracking-wider">
+                {isStealth ? '🎭 STEALTH: ON' : '🎭 STEALTH'}
+              </span>
+            </button>
+
+            {/* Quick Lock Button if PIN is set */}
+            {pinEnabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playTick();
+                  onLockTerminalNow?.();
+                }}
+                className="p-1.5 border border-[#ff0055]/70 bg-[#ff0055]/15 text-[#ff0055] hover:bg-[#ff0055]/30 text-xs transition-all flex items-center gap-1 cursor-pointer"
+                title="Bloquear Terminal Imediatamente"
+              >
+                <Lock className="w-3.5 h-3.5 text-[#ff0055]" />
+                <span className="text-[10px] font-bold">TRANCAR</span>
+              </button>
+            )}
 
             {/* CRT Scanline Toggle */}
             <button
