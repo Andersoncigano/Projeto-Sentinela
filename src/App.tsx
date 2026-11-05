@@ -1009,6 +1009,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isNoteImporterOpen, setIsNoteImporterOpen] = useState(false);
   const [mobileReportExpanded, setMobileReportExpanded] = useState(false);
+  const [showDetailedRescisaoBreakdown, setShowDetailedRescisaoBreakdown] = useState(false);
 
   // Consolidação dos 3 Pilares para exibição instantânea no Cockpit e no Celular
   const cockpitReportData = useMemo(() => {
@@ -1041,6 +1042,43 @@ export default function App() {
       countUber18_3087,
     };
   }, [expenses, selectedMonth]);
+
+  // Consolidação Global do Ciclo Rescisão & Fatura do Cartão (independente do filtro de mês)
+  const globalRescisaoData = useMemo(() => {
+    // 1. Fatura de Novembro do Cartão (26 compras feitas entre 17/10 e 31/10 com vencimento em 23/11)
+    const cartaoFaturaNovItems = expenses.filter(
+      (e) => (e.metodo_pagamento === 'cartao_credito' || e.metodo_pagamento === 'cartao_proprio' || e.metodo_pagamento === 'cartao_mae') &&
+        (e.fatura_mes === '2026-11' || (!e.fatura_mes && e.data <= '2026-10-31'))
+    );
+    const totalCartaoFaturaNov = cartaoFaturaNovItems.reduce((acc, e) => acc + e.valor, 0);
+
+    // 2. Todos os Pix da Rescisão desde a sexta-feira 30/10 até hoje (novembro)
+    const pixRescisaoItems = expenses.filter(
+      (e) => e.metodo_pagamento === 'pix_rescisao' || (e.vinculado_rescisao && e.data >= '2026-10-30' && (e.metodo_pagamento === 'pix' || e.metodo_pagamento === 'dinheiro' || e.metodo_pagamento === 'debito'))
+    );
+    const totalPixRescisaoGasto = pixRescisaoItems.reduce((acc, e) => acc + e.valor, 0);
+
+    // 3. Verba Rescisória homologada recebida em 30/10
+    const valorRescisaoRecebida = settings.rescisao_prevista?.valor ?? 2796.91;
+
+    // 4. Saldo em conta HOJE da rescisão (depois de todos os Pix de 30/10 a 05/11, antes de debitar o cartão em 23/11)
+    const saldoRescisaoHoje = Math.max(0, valorRescisaoRecebida - totalPixRescisaoGasto);
+
+    // 5. Saldo FINAL da rescisão que sobrará no cofre após pagar a fatura em 23/11
+    const saldoRescisaoAposFatura = Math.max(0, saldoRescisaoHoje - totalCartaoFaturaNov);
+
+    return {
+      valorRescisaoRecebida,
+      totalCartaoFaturaNov,
+      cartaoFaturaNovCount: cartaoFaturaNovItems.length,
+      totalPixRescisaoGasto,
+      pixRescisaoCount: pixRescisaoItems.length,
+      saldoRescisaoHoje,
+      saldoRescisaoAposFatura,
+      cartaoFaturaNovItems,
+      pixRescisaoItems,
+    };
+  }, [expenses, settings.rescisao_prevista]);
 
   // Salvar preferências no localStorage
   useEffect(() => {
@@ -1604,6 +1642,221 @@ export default function App() {
             />
 
             {/* =========================================================================
+                PAINEL DE ALTA VISIBILIDADE // RESCISÃO & FATURA DO CARTÃO (CICLO COMPLETO)
+                Atende com clareza cristalina: O Cartão 23/11 e a Rescisão com seus saldos
+                ========================================================================= */}
+            <div className="bg-[#0b0318] border-2 border-[#bd00ff] p-4 sm:p-5 font-mono shadow-2xl shadow-[#bd00ff]/20 space-y-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-[#bd00ff]/30">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-1 bg-[#bd00ff] text-black font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+                      <Sparkles className="w-3.5 h-3.5 text-black" />
+                      <span>PAINEL DE CONTROLE // RESCISÃO & FATURA DO CARTÃO</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 bg-black border border-[#bd00ff]/60 text-[#c084fc] font-bold">
+                      CICLO GLOBAL (SEM RECORTE DE MÊS)
+                    </span>
+                  </div>
+                  <h1 className="text-base sm:text-xl font-black text-white tracking-tight uppercase">
+                    QUANTO É O CARTÃO & QUANTO TEM DA RESCISÃO
+                  </h1>
+                  <p className="text-xs text-neutral-300">
+                    Visão unificada da verba rescisória (R$ 2.796,91 recebidos em 30/10) vs os gastos no Pix e a Fatura de 23/11.
+                  </p>
+                </div>
+                <div className="px-3 py-1.5 bg-black/90 border border-[#00ff66] text-[#00ff66] text-xs font-bold uppercase tracking-wider flex items-center gap-2 self-stretch sm:self-auto justify-center">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#00ff66] animate-pulse" />
+                  <span>SALÁRIO LIVRE: R$ 200,00 INTACTO</span>
+                </div>
+              </div>
+
+              {/* 4 CARDS EM DESTAQUE MÁXIMO */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* CARD 1: CARTÃO 23/11 */}
+                <div className="bg-[#020d18] border-2 border-[#00f0ff] p-3.5 space-y-2 shadow-lg shadow-[#00f0ff]/15">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-[#00f0ff] flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-[#00f0ff]" />
+                      <span>1. FATURA DO CARTÃO</span>
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#00f0ff]/20 text-[#00f0ff] font-bold uppercase">
+                      VENCE 23/11
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-[#00f0ff] font-mono">
+                    {formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)}
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-tight">
+                    <strong>{globalRescisaoData.cartaoFaturaNovCount} compras</strong> feitas no cartão entre 17/10 e 31/10 (Denis R$ 341,97, Ubers, Abbey, etc.).
+                  </p>
+                  <div className="pt-1.5 border-t border-[#00f0ff]/30 text-[10px] text-[#00ff66] font-bold">
+                    ✓ Será debitado 100% da Rescisão no vencimento (sem rotativo).
+                  </div>
+                </div>
+
+                {/* CARD 2: PIX RESCISÃO JÁ GASTO */}
+                <div className="bg-[#14020c] border-2 border-[#ff0055] p-3.5 space-y-2 shadow-lg shadow-[#ff0055]/15">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-[#ff0055] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#ff0055]" />
+                      <span>2. PIX RESCISÃO JÁ GASTO</span>
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#ff0055]/20 text-[#ff0055] font-bold uppercase">
+                      30/10 ATÉ HOJE
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-[#ff0055] font-mono">
+                    {formatCurrency(globalRescisaoData.totalPixRescisaoGasto, !showValues)}
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-tight">
+                    <strong>{globalRescisaoData.pixRescisaoCount} saídas Pix</strong> debitadas direto da conta da rescisão desde sexta (30/10 a 05/11).
+                  </p>
+                  <div className="pt-1.5 border-t border-[#ff0055]/30 text-[10px] text-neutral-400">
+                    Sexta 30 (490,34) + Sáb 31 (302,26) + Nov (339,96).
+                  </div>
+                </div>
+
+                {/* CARD 3: SALDO ATUAL HOJE EM CONTA */}
+                <div className="bg-[#021408] border-2 border-[#00ff66] p-3.5 space-y-2 shadow-lg shadow-[#00ff66]/15">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-[#00ff66] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#00ff66]" />
+                      <span>3. SALDO HOJE EM CONTA</span>
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#00ff66]/20 text-[#00ff66] font-bold uppercase">
+                      DISPONÍVEL AGORA
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-[#00ff66] font-mono">
+                    {formatCurrency(globalRescisaoData.saldoRescisaoHoje, !showValues)}
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-tight">
+                    Dinheiro ainda em mãos da rescisão hoje: R$ 2.796,91 - R$ 1.132,56 (Pix já saídos).
+                  </p>
+                  <div className="pt-1.5 border-t border-[#00ff66]/30 text-[10px] text-[#00ff66] font-bold">
+                    ✓ Valor real disponível na sua conta bancária agora.
+                  </div>
+                </div>
+
+                {/* CARD 4: SALDO FINAL APÓS FATURA */}
+                <div className="bg-[#120422] border-2 border-[#ffe600] p-3.5 space-y-2 shadow-lg shadow-[#ffe600]/15">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-black tracking-wider text-[#ffe600] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#ffe600]" />
+                      <span>4. SOBRA FINAL DA RESCISÃO</span>
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#ffe600]/20 text-[#ffe600] font-bold uppercase">
+                      APÓS DIA 23/11
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-[#ffe600] font-mono">
+                    {formatCurrency(globalRescisaoData.saldoRescisaoAposFatura, !showValues)}
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-tight">
+                    Sobra líquida blindada da rescisão no cofre após pagar a fatura de R$ 959,14 no dia 23/11.
+                  </p>
+                  <div className="pt-1.5 border-t border-[#ffe600]/30 text-[10px] text-[#c084fc] font-bold">
+                    🛡️ Fundo de sobrevida e reserva constituído com sucesso!
+                  </div>
+                </div>
+              </div>
+
+              {/* BARRA COMPARATIVA / EQUAÇÃO VISUAL DA RESCISÃO */}
+              <div className="bg-black/90 border border-neutral-700 p-3 text-xs space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
+                  <span className="text-white font-bold">
+                    EQUAÇÃO DA RESCISÃO: <span className="text-[#c084fc] font-black">R$ {formatCurrency(globalRescisaoData.valorRescisaoRecebida, !showValues)}</span> (Entrada em 30/10)
+                  </span>
+                  <div className="flex items-center gap-3 text-[10px] flex-wrap">
+                    <span className="text-[#ff0055] font-bold">● Pix Gasto: {formatCurrency(globalRescisaoData.totalPixRescisaoGasto, !showValues)}</span>
+                    <span className="text-[#00f0ff] font-bold">● Cartão 23/11: {formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)}</span>
+                    <span className="text-[#00ff66] font-bold">● Sobra: {formatCurrency(globalRescisaoData.saldoRescisaoAposFatura, !showValues)}</span>
+                  </div>
+                </div>
+
+                <div className="w-full h-3 bg-neutral-900 border border-neutral-700 flex overflow-hidden">
+                  <div 
+                    className="bg-[#ff0055] h-full transition-all duration-500"
+                    style={{ width: `${(globalRescisaoData.totalPixRescisaoGasto / globalRescisaoData.valorRescisaoRecebida) * 100}%` }}
+                    title={`Pix Gasto: ${((globalRescisaoData.totalPixRescisaoGasto / globalRescisaoData.valorRescisaoRecebida) * 100).toFixed(1)}%`}
+                  />
+                  <div 
+                    className="bg-[#00f0ff] h-full transition-all duration-500"
+                    style={{ width: `${(globalRescisaoData.totalCartaoFaturaNov / globalRescisaoData.valorRescisaoRecebida) * 100}%` }}
+                    title={`Cartão 23/11: ${((globalRescisaoData.totalCartaoFaturaNov / globalRescisaoData.valorRescisaoRecebida) * 100).toFixed(1)}%`}
+                  />
+                  <div 
+                    className="bg-[#00ff66] h-full transition-all duration-500"
+                    style={{ width: `${(globalRescisaoData.saldoRescisaoAposFatura / globalRescisaoData.valorRescisaoRecebida) * 100}%` }}
+                    title={`Sobra Líquida: ${((globalRescisaoData.saldoRescisaoAposFatura / globalRescisaoData.valorRescisaoRecebida) * 100).toFixed(1)}%`}
+                  />
+                </div>
+
+                {/* BOTÃO PARA EXPANDIR O DETALHAMENTO DE CADA LADO */}
+                <div className="pt-1.5 flex justify-between items-center">
+                  <span className="text-[10px] text-neutral-400">
+                    💡 O Cartão (R$ 959,14) e o Pix Rescisão (R$ 1.132,56) são categorias separadas que juntas somam R$ 2.091,70 debitadas da rescisão de R$ 2.796,91.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedRescisaoBreakdown(!showDetailedRescisaoBreakdown)}
+                    className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-[#00f0ff] text-[10px] font-bold uppercase transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    {showDetailedRescisaoBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    <span>{showDetailedRescisaoBreakdown ? 'OCULTAR EXTRATO COMPARATIVO' : 'VER EXTRATO COMPARATIVO (ITEM POR ITEM)'}</span>
+                  </button>
+                </div>
+
+                {/* Extrato Comparativo Expandido */}
+                {showDetailedRescisaoBreakdown && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-neutral-800 text-xs">
+                    {/* Coluna 1: Compras do Cartão */}
+                    <div className="bg-[#020b12] border border-[#00f0ff]/40 p-2.5 space-y-1.5">
+                      <div className="flex justify-between items-center border-b border-[#00f0ff]/30 pb-1">
+                        <span className="font-black text-[#00f0ff] uppercase text-[11px] flex items-center gap-1">
+                          <CreditCard className="w-3 h-3" />
+                          <span>CARTÃO DE CRÉDITO (FATURA 23/11)</span>
+                        </span>
+                        <span className="font-bold text-[#00f0ff]">
+                          {formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)} ({globalRescisaoData.cartaoFaturaNovCount} itens)
+                        </span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto space-y-1 pr-1 divide-y divide-neutral-800/60 text-[10px]">
+                        {globalRescisaoData.cartaoFaturaNovItems.map((item, idx) => (
+                          <div key={item.id || idx} className="flex justify-between items-center py-0.5 text-neutral-300">
+                            <span>{item.data.slice(5)} • {anonymizeMerchant(item.descricao, privacy.isStealth)}</span>
+                            <span className="font-mono font-bold text-[#00f0ff]">{formatCurrency(item.valor, !showValues)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Coluna 2: Saídas Pix Rescisão */}
+                    <div className="bg-[#12020a] border border-[#ff0055]/40 p-2.5 space-y-1.5">
+                      <div className="flex justify-between items-center border-b border-[#ff0055]/30 pb-1">
+                        <span className="font-black text-[#ff0055] uppercase text-[11px] flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-[#ff0055]" />
+                          <span>SAÍDAS PIX RESCISÃO (30/10 A 05/11)</span>
+                        </span>
+                        <span className="font-bold text-[#ff0055]">
+                          {formatCurrency(globalRescisaoData.totalPixRescisaoGasto, !showValues)} ({globalRescisaoData.pixRescisaoCount} itens)
+                        </span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto space-y-1 pr-1 divide-y divide-neutral-800/60 text-[10px]">
+                        {globalRescisaoData.pixRescisaoItems.map((item, idx) => (
+                          <div key={item.id || idx} className="flex justify-between items-center py-0.5 text-neutral-300">
+                            <span>{item.data.slice(5)} • {anonymizeMerchant(item.descricao, privacy.isStealth)}</span>
+                            <span className="font-mono font-bold text-[#ff0055]">{formatCurrency(item.valor, !showValues)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* =========================================================================
                 TABELA TOTAL DOS VALORES :: TELA DE CIMA (ALTA VISIBILIDADE)
                 ========================================================================= */}
             <div className="bg-[#030814] border-2 border-[#00f0ff] p-4 sm:p-5 font-mono shadow-2xl shadow-[#00f0ff]/15 space-y-4">
@@ -1679,7 +1932,7 @@ export default function App() {
                       </td>
                       <td className="py-2.5 px-3 text-neutral-300">
                         <span className="px-1.5 py-0.5 bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 text-[10px] font-bold">
-                          FATURA VENCE EM 23/11 (25 COMPRAS)
+                          FATURA VENCE EM 23/11 ({globalRescisaoData.cartaoFaturaNovCount} COMPRAS)
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-[#00f0ff] font-bold">
@@ -2333,7 +2586,11 @@ export default function App() {
               <div className="lg:col-span-5">
                 {/* Cofre de Emergência: constituído pela rescisão (a descobrir na sexta dia 30) */}
                 <EmergencyVault
-                  balance={settings.reserva_emergencia}
+                  balance={globalRescisaoData.saldoRescisaoHoje}
+                  valorOriginal={globalRescisaoData.valorRescisaoRecebida}
+                  totalPixGasto={globalRescisaoData.totalPixRescisaoGasto}
+                  faturaCartao={globalRescisaoData.totalCartaoFaturaNov}
+                  saldoAposFatura={globalRescisaoData.saldoRescisaoAposFatura}
                   rescisaoPrevista={settings.rescisao_prevista}
                   onEmergencyWithdrawal={handleEmergencyWithdrawal}
                   onUpdateRescisao={handleUpdateRescisao}
