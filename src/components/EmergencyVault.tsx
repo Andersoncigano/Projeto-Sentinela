@@ -9,6 +9,7 @@ interface EmergencyVaultProps {
   totalPixGasto?: number;
   faturaCartao?: number;
   saldoAposFatura?: number;
+  rendimentoPicPay?: number;
   rescisaoPrevista?: {
     data_prevista: string;
     valor?: number;
@@ -26,6 +27,7 @@ export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
   totalPixGasto,
   faturaCartao,
   saldoAposFatura,
+  rendimentoPicPay,
   rescisaoPrevista,
   onEmergencyWithdrawal,
   onUpdateRescisao,
@@ -145,7 +147,7 @@ export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
       {!isAguardando && (valorOriginal !== undefined || totalPixGasto !== undefined) && (
         <div className="mt-3 p-2.5 bg-neutral-950 border border-neutral-800 text-[11px] space-y-1.5 font-mono">
           <div className="flex justify-between text-neutral-400">
-            <span>(+) Depósito Homologado (30/10):</span>
+            <span>(+) Depósito da Rescisão (30/10):</span>
             <span className="font-bold text-[#c084fc]">{formatCurrency(valorOriginal ?? 2796.91, isHidden)}</span>
           </div>
           {totalPixGasto !== undefined && (
@@ -154,19 +156,25 @@ export const EmergencyVault: React.FC<EmergencyVaultProps> = ({
               <span className="font-bold text-[#ff0055]">-{formatCurrency(totalPixGasto, isHidden)}</span>
             </div>
           )}
+          {rendimentoPicPay !== undefined && rendimentoPicPay > 0 && (
+            <div className="flex justify-between text-[#00ff66] text-[10px]">
+              <span>(+) Rendimento CDI / Saldo PicPay:</span>
+              <span className="font-bold">+{formatCurrency(rendimentoPicPay, isHidden)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-white border-t border-neutral-800 pt-1 font-bold">
-            <span>(=) Saldo Disponível Hoje em Conta:</span>
+            <span>(=) Saldo Disponível Hoje no PicPay:</span>
             <span className="text-[#00ff66]">{formatCurrency(balance, isHidden)}</span>
           </div>
           {faturaCartao !== undefined && (
             <div className="flex justify-between text-[#00f0ff] text-[10px]">
-              <span>(Provisão) Fatura Cartão 23/11:</span>
+              <span>(-) Provisão Fatura Cartão (A pagar em 23/11):</span>
               <span>-{formatCurrency(faturaCartao, isHidden)}</span>
             </div>
           )}
           {saldoAposFatura !== undefined && (
             <div className="flex justify-between text-[#ffe600] border-t border-neutral-800 pt-1 font-black text-xs">
-              <span>(=) Sobra Final Blindada pós-fatura:</span>
+              <span>(=) Sobra Final no PicPay (Após 23/11):</span>
               <span>{formatCurrency(saldoAposFatura, isHidden)}</span>
             </div>
           )}

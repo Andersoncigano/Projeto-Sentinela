@@ -46,6 +46,7 @@ export interface SystemSettings {
   fatura_novembro_paga?: boolean; // Fatura de 23/11 liquidada com a verba rescisória
   fatura_novembro_paga_em?: string; // Data de liquidação da fatura de 23/11
   ciclo_dezembro_iniciado?: boolean; // Virada de ciclo para Dezembro a partir de 05/12
+  saldo_picpay_conferido?: number; // Saldo oficial real conferido no PicPay (ex: 1685.78)
   rescisao_prevista?: {
     data_prevista: string; // ex: '2026-10-30'
     valor?: number;

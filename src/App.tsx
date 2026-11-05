@@ -59,6 +59,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   dia_fechamento_cartao: 17, // Vira dia 17
   dia_vencimento_cartao: 23, // Vence dia 23
   fatura_outubro_paga: true, // Fatura de 23/10 QUITADA / PAGA pelo usuário
+  saldo_picpay_conferido: 1685.78, // Saldo oficial confirmado no PicPay pelo usuário
   rescisao_prevista: {
     data_prevista: '2026-10-30',
     valor: 2796.91,
@@ -844,6 +845,7 @@ export default function App() {
             observacao: 'Rescisão oficial homologada pelo usuário: R$ 2.796,91 recebidos em 30/10.',
           };
         }
+        parsed.saldo_picpay_conferido = parsed.saldo_picpay_conferido ?? 1685.78;
         localStorage.setItem('sentinela_settings', JSON.stringify(parsed));
         return parsed;
       } catch {
@@ -1061,10 +1063,14 @@ export default function App() {
     // 3. Verba Rescisória homologada recebida em 30/10
     const valorRescisaoRecebida = settings.rescisao_prevista?.valor ?? 2796.91;
 
-    // 4. Saldo em conta HOJE da rescisão (depois de todos os Pix de 30/10 a 05/11, antes de debitar o cartão em 23/11)
-    const saldoRescisaoHoje = Math.max(0, valorRescisaoRecebida - totalPixRescisaoGasto);
+    // 4. Saldo em conta HOJE no PicPay:
+    // Conferido pelo usuário no app do PicPay: R$ 1.685,78 (o cartão ainda NÃO foi descontado!)
+    const saldoRescisaoHoje = settings.saldo_picpay_conferido ?? 1685.78;
+    const saldoCalculadoTeorico = Math.max(0, valorRescisaoRecebida - totalPixRescisaoGasto);
+    const rendimentoPicPay = Math.max(0, saldoRescisaoHoje - saldoCalculadoTeorico);
 
-    // 5. Saldo FINAL da rescisão que sobrará no cofre após pagar a fatura em 23/11
+    // 5. Saldo FINAL da rescisão que sobrará no PicPay após pagar a fatura em 23/11
+    // (A fatura NÃO é debitada agora! Só é paga no dia 23 de Novembro)
     const saldoRescisaoAposFatura = Math.max(0, saldoRescisaoHoje - totalCartaoFaturaNov);
 
     return {
@@ -1077,8 +1083,9 @@ export default function App() {
       saldoRescisaoAposFatura,
       cartaoFaturaNovItems,
       pixRescisaoItems,
+      rendimentoPicPay,
     };
-  }, [expenses, settings.rescisao_prevista]);
+  }, [expenses, settings.rescisao_prevista, settings.saldo_picpay_conferido]);
 
   // Salvar preferências no localStorage
   useEffect(() => {
@@ -1680,17 +1687,17 @@ export default function App() {
                       <span>1. FATURA DO CARTÃO</span>
                     </span>
                     <span className="text-[9px] px-1.5 py-0.5 bg-[#00f0ff]/20 text-[#00f0ff] font-bold uppercase">
-                      VENCE 23/11
+                      A PAGAR EM 23/11
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#00f0ff] font-mono">
                     {formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)}
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-tight">
-                    <strong>{globalRescisaoData.cartaoFaturaNovCount} compras</strong> feitas no cartão entre 17/10 e 31/10 (Denis R$ 341,97, Ubers, Abbey, etc.).
+                    <strong>{globalRescisaoData.cartaoFaturaNovCount} compras</strong> (17/10 a 31/10). Pagará apenas no dia <strong>23 de Novembro</strong>.
                   </p>
-                  <div className="pt-1.5 border-t border-[#00f0ff]/30 text-[10px] text-[#00ff66] font-bold">
-                    ✓ Será debitado 100% da Rescisão no vencimento (sem rotativo).
+                  <div className="pt-1.5 border-t border-[#00f0ff]/30 text-[10px] text-[#ffe600] font-bold">
+                    ⏳ NÃO descontado agora! Agendado para 23/11.
                   </div>
                 </div>
 
@@ -1709,41 +1716,41 @@ export default function App() {
                     {formatCurrency(globalRescisaoData.totalPixRescisaoGasto, !showValues)}
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-tight">
-                    <strong>{globalRescisaoData.pixRescisaoCount} saídas Pix</strong> debitadas direto da conta da rescisão desde sexta (30/10 a 05/11).
+                    <strong>{globalRescisaoData.pixRescisaoCount} saídas Pix</strong> já debitadas da conta desde sexta (30/10 a 05/11).
                   </p>
                   <div className="pt-1.5 border-t border-[#ff0055]/30 text-[10px] text-neutral-400">
                     Sexta 30 (490,34) + Sáb 31 (302,26) + Nov (339,96).
                   </div>
                 </div>
 
-                {/* CARD 3: SALDO ATUAL HOJE EM CONTA */}
+                {/* CARD 3: SALDO ATUAL NO PICPAY */}
                 <div className="bg-[#021408] border-2 border-[#00ff66] p-3.5 space-y-2 shadow-lg shadow-[#00ff66]/15">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-black tracking-wider text-[#00ff66] flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#00ff66]" />
-                      <span>3. SALDO HOJE EM CONTA</span>
+                      <span>3. SALDO HOJE NO PICPAY</span>
                     </span>
-                    <span className="text-[9px] px-1.5 py-0.5 bg-[#00ff66]/20 text-[#00ff66] font-bold uppercase">
-                      DISPONÍVEL AGORA
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#00ff66] text-black font-black uppercase">
+                      ✓ CONFERIDO NO APP
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-[#00ff66] font-mono">
                     {formatCurrency(globalRescisaoData.saldoRescisaoHoje, !showValues)}
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-tight">
-                    Dinheiro ainda em mãos da rescisão hoje: R$ 2.796,91 - R$ 1.132,56 (Pix já saídos).
+                    Valor real na sua conta do PicPay hoje. O cartão ainda <strong>NÃO foi descontado</strong>.
                   </p>
                   <div className="pt-1.5 border-t border-[#00ff66]/30 text-[10px] text-[#00ff66] font-bold">
-                    ✓ Valor real disponível na sua conta bancária agora.
+                    ✓ Dinheiro disponível agora para sua segurança.
                   </div>
                 </div>
 
-                {/* CARD 4: SALDO FINAL APÓS FATURA */}
+                {/* CARD 4: SOBRA FINAL NO PICPAY APÓS PAGAR O CARTÃO */}
                 <div className="bg-[#120422] border-2 border-[#ffe600] p-3.5 space-y-2 shadow-lg shadow-[#ffe600]/15">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-black tracking-wider text-[#ffe600] flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#ffe600]" />
-                      <span>4. SOBRA FINAL DA RESCISÃO</span>
+                      <span>4. SOBRA FINAL NO PICPAY</span>
                     </span>
                     <span className="text-[9px] px-1.5 py-0.5 bg-[#ffe600]/20 text-[#ffe600] font-bold uppercase">
                       APÓS DIA 23/11
@@ -1753,10 +1760,10 @@ export default function App() {
                     {formatCurrency(globalRescisaoData.saldoRescisaoAposFatura, !showValues)}
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-tight">
-                    Sobra líquida blindada da rescisão no cofre após pagar a fatura de R$ 959,14 no dia 23/11.
+                    Sobra que restará no PicPay após pagar a fatura de R$ 959,14 em 23/11 (1.685,78 - 959,14).
                   </p>
                   <div className="pt-1.5 border-t border-[#ffe600]/30 text-[10px] text-[#c084fc] font-bold">
-                    🛡️ Fundo de sobrevida e reserva constituído com sucesso!
+                    🛡️ Fundo blindado de sobrevida constituído no cofre!
                   </div>
                 </div>
               </div>
@@ -1765,12 +1772,11 @@ export default function App() {
               <div className="bg-black/90 border border-neutral-700 p-3 text-xs space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
                   <span className="text-white font-bold">
-                    EQUAÇÃO DA RESCISÃO: <span className="text-[#c084fc] font-black">R$ {formatCurrency(globalRescisaoData.valorRescisaoRecebida, !showValues)}</span> (Entrada em 30/10)
+                    EQUAÇÃO DO PICPAY: <span className="text-[#00ff66] font-black">R$ {formatCurrency(globalRescisaoData.saldoRescisaoHoje, !showValues)}</span> (Saldo em Conta Hoje)
                   </span>
                   <div className="flex items-center gap-3 text-[10px] flex-wrap">
-                    <span className="text-[#ff0055] font-bold">● Pix Gasto: {formatCurrency(globalRescisaoData.totalPixRescisaoGasto, !showValues)}</span>
-                    <span className="text-[#00f0ff] font-bold">● Cartão 23/11: {formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)}</span>
-                    <span className="text-[#00ff66] font-bold">● Sobra: {formatCurrency(globalRescisaoData.saldoRescisaoAposFatura, !showValues)}</span>
+                    <span className="text-[#00f0ff] font-bold">● A Pagar Cartão 23/11: -{formatCurrency(globalRescisaoData.totalCartaoFaturaNov, !showValues)}</span>
+                    <span className="text-[#ffe600] font-bold">● Sobra Final no PicPay: {formatCurrency(globalRescisaoData.saldoRescisaoAposFatura, !showValues)}</span>
                   </div>
                 </div>
 
@@ -2591,6 +2597,7 @@ export default function App() {
                   totalPixGasto={globalRescisaoData.totalPixRescisaoGasto}
                   faturaCartao={globalRescisaoData.totalCartaoFaturaNov}
                   saldoAposFatura={globalRescisaoData.saldoRescisaoAposFatura}
+                  rendimentoPicPay={globalRescisaoData.rendimentoPicPay}
                   rescisaoPrevista={settings.rescisao_prevista}
                   onEmergencyWithdrawal={handleEmergencyWithdrawal}
                   onUpdateRescisao={handleUpdateRescisao}
