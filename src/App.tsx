@@ -51,7 +51,7 @@ import {
 
 const DEFAULT_SETTINGS: SystemSettings = {
   renda_mensal: 850.0,
-  reserva_emergencia: 0.0, // A reserva de emergência É a rescisão! Será constituída no dia 30/10
+  reserva_emergencia: 2796.91, // A reserva de emergência constituída com a rescisão oficial
   horas_trabalho_mes: 88.0, // PCD Meio Período (~4h/dia * 22 dias)
   custos_fixos_essenciais: 650.0, // Obrigações: luz, remédio, internet e banco (~R$ 650)
   meta_poupanca_minima: 0.0, // Deixa exatamente R$ 200,00 livres da renda ordinária
@@ -61,9 +61,9 @@ const DEFAULT_SETTINGS: SystemSettings = {
   fatura_outubro_paga: true, // Fatura de 23/10 QUITADA / PAGA pelo usuário
   rescisao_prevista: {
     data_prevista: '2026-10-30',
-    valor: 0.0,
-    status: 'aguardando_calculo',
-    observacao: 'A reserva de emergência é a própria rescisão. O valor oficial será descoberto na sexta-feira, dia 30/10.',
+    valor: 2796.91,
+    status: 'recebido',
+    observacao: 'Rescisão oficial homologada pelo usuário: R$ 2.796,91 recebidos em 30/10.',
   },
 };
 
@@ -76,6 +76,24 @@ const DEFAULT_DEBTS: DebtRecord[] = [
     meta_amortizacao_mes: 0.0,
     prioridade: 1,
     observacao: 'Fatura de Outubro QUITADA pelo usuário (R$ 0,00 a vencer em 23/10)',
+  },
+  {
+    id: 'debt_perfume_parcelas',
+    credor: 'Perfume (Parcelamento no Cartão 2x R$ 50,00)',
+    valor_total: 100.0,
+    valor_pago: 0.0,
+    meta_amortizacao_mes: 50.0,
+    prioridade: 2,
+    observacao: 'Faltam 2 parcelas de R$ 50,00 no cartão. Parcela 1/2 em 23/11 (R$ 50) e Parcela 2/2 em 23/12 (R$ 50) - ambas vinculadas à quitação via rescisão.',
+  },
+  {
+    id: 'debt_netflix_recorrente',
+    credor: 'Netflix (Mensalidade no Cartão)',
+    valor_total: 20.0,
+    valor_pago: 0.0,
+    meta_amortizacao_mes: 20.0,
+    prioridade: 3,
+    observacao: 'Assinatura mensal de R$ 20,00 no cartão com vencimento em 23/11 vinculada à verba rescisória.',
   },
 ];
 
@@ -227,7 +245,7 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     id: 'exp_lord_uber23',
     data: '2026-10-23',
     descricao: 'Lord - Uber',
-    valor: 12.98,
+    valor: 12.38,
     metodo_pagamento: 'cartao_credito',
     categoria: 'transporte',
     is_impulsive: false,
@@ -275,6 +293,527 @@ const DEFAULT_INITIAL_EXPENSES: ExpenseRecord[] = [
     fatura_mes: '2026-11',
     fatura_vencimento: '2026-11-23',
   },
+  {
+    id: 'exp_mercado24_4346',
+    data: '2026-10-24',
+    descricao: 'Mercado (Pix no Cartão)',
+    valor: 43.46,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1729778400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber24_970',
+    data: '2026-10-24',
+    descricao: 'Uber',
+    valor: 9.70,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729782000000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_abbey25_63',
+    data: '2026-10-25',
+    descricao: 'Abbey',
+    valor: 63.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1729854000000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber25_697',
+    data: '2026-10-25',
+    descricao: 'Uber',
+    valor: 6.97,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729861200000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber25_3525',
+    data: '2026-10-25',
+    descricao: 'Uber',
+    valor: 35.25,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1729868400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_netflix_outubro',
+    data: '2026-10-25',
+    descricao: 'Netflix',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1729869000000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_perfume_parc1',
+    data: '2026-10-25',
+    descricao: 'Perfume (Parcela 1/2)',
+    valor: 50.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'impulsivo',
+    is_impulsive: true,
+    timestamp: 1729869600000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_abbey29_44',
+    data: '2026-10-29',
+    descricao: 'Abbey',
+    valor: 44.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730214000000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber29_1243',
+    data: '2026-10-29',
+    descricao: 'Uber',
+    valor: 12.43,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730217600000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber29_770',
+    data: '2026-10-29',
+    descricao: 'Uber',
+    valor: 7.70,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730221200000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_uber31_578_cartao',
+    data: '2026-10-31',
+    descricao: 'Uber (Pix no Cartão)',
+    valor: 5.78,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730419200000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-11',
+    fatura_vencimento: '2026-11-23',
+  },
+  {
+    id: 'exp_pix_farmacia_30',
+    data: '2026-10-30',
+    descricao: 'Farmácia',
+    valor: 40.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'saude',
+    is_impulsive: false,
+    timestamp: 1730300400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_mercado_30',
+    data: '2026-10-30',
+    descricao: 'Mercado',
+    valor: 35.95,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730304000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber30_723',
+    data: '2026-10-30',
+    descricao: 'Uber',
+    valor: 7.23,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730307600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_vinicius_30',
+    data: '2026-10-30',
+    descricao: 'Vinicius',
+    valor: 150.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'outros',
+    is_impulsive: false,
+    timestamp: 1730311200000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_lord30_28',
+    data: '2026-10-30',
+    descricao: 'Lord',
+    valor: 28.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730314800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_barbearia_30',
+    data: '2026-10-30',
+    descricao: 'Barbearia',
+    valor: 100.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730318400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber30_920',
+    data: '2026-10-30',
+    descricao: 'Uber',
+    valor: 9.20,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730322000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber30_1002',
+    data: '2026-10-30',
+    descricao: 'Uber',
+    valor: 10.02,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730325600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber30_794',
+    data: '2026-10-30',
+    descricao: 'Uber',
+    valor: 7.94,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730329200000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_lord30_67',
+    data: '2026-10-30',
+    descricao: 'Lord',
+    valor: 67.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730332800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_lord30_35',
+    data: '2026-10-30',
+    descricao: 'Lord',
+    valor: 35.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730336400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_banrisul_31',
+    data: '2026-10-31',
+    descricao: 'Banrisul',
+    valor: 189.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730386800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber31_1426',
+    data: '2026-10-31',
+    descricao: 'Uber',
+    valor: 14.26,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730390400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber31_794',
+    data: '2026-10-31',
+    descricao: 'Uber',
+    valor: 7.94,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730394000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_trem_31',
+    data: '2026-10-31',
+    descricao: 'Trem',
+    valor: 5.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730397600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_cafe_31',
+    data: '2026-10-31',
+    descricao: 'Café',
+    valor: 30.59,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'alimentacao_impulsiva',
+    is_impulsive: true,
+    timestamp: 1730401200000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_flor_31',
+    data: '2026-10-31',
+    descricao: 'Flor',
+    valor: 20.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730404800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_mercado_31',
+    data: '2026-10-31',
+    descricao: 'Mercado',
+    valor: 4.59,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730408400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber31_2436',
+    data: '2026-10-31',
+    descricao: 'Uber',
+    valor: 24.36,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730412000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber31_652',
+    data: '2026-10-31',
+    descricao: 'Uber',
+    valor: 6.52,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730415600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_abbey01_93',
+    data: '2026-11-01',
+    descricao: 'Abbey',
+    valor: 93.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'lazer_impulsivo',
+    is_impulsive: true,
+    timestamp: 1730473200000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber01_3829',
+    data: '2026-11-01',
+    descricao: 'Uber',
+    valor: 38.29,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730476800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber01_1713',
+    data: '2026-11-01',
+    descricao: 'Uber',
+    valor: 17.13,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730480400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_uber02_1623',
+    data: '2026-11-02',
+    descricao: 'Uber',
+    valor: 16.23,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730559600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_perfume02_5469',
+    data: '2026-11-02',
+    descricao: 'Perfume',
+    valor: 54.69,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'impulsivo',
+    is_impulsive: true,
+    timestamp: 1730563200000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_bancas02_411',
+    data: '2026-11-02',
+    descricao: 'Bancas',
+    valor: 4.11,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'outros',
+    is_impulsive: false,
+    timestamp: 1730566800000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_chave02_20',
+    data: '2026-11-02',
+    descricao: 'Chave',
+    valor: 20.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730570400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_telegram03_1192',
+    data: '2026-11-03',
+    descricao: 'Telegram',
+    valor: 11.92,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730646000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_tag03_20',
+    data: '2026-11-03',
+    descricao: 'Tag',
+    valor: 20.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'transporte',
+    is_impulsive: false,
+    timestamp: 1730649600000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_mercadolivre04_4010',
+    data: '2026-11-04',
+    descricao: 'Mercado Livre',
+    valor: 40.10,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730732400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_mercado04_549',
+    data: '2026-11-04',
+    descricao: 'Mercado',
+    valor: 5.49,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730736000000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_pix_mercadolivre05_19',
+    data: '2026-11-05',
+    descricao: 'Mercado Livre',
+    valor: 19.00,
+    metodo_pagamento: 'pix_rescisao',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1730822400000,
+    vinculado_rescisao: true,
+  },
+  {
+    id: 'exp_perfume_parc2',
+    data: '2026-11-20',
+    descricao: 'Perfume (Parcela 2/2)',
+    valor: 50.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'impulsivo',
+    is_impulsive: true,
+    timestamp: 1732118400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-12',
+    fatura_vencimento: '2026-12-23',
+  },
+  {
+    id: 'exp_netflix_novembro',
+    data: '2026-11-25',
+    descricao: 'Netflix',
+    valor: 20.00,
+    metodo_pagamento: 'cartao_credito',
+    categoria: 'essencial',
+    is_impulsive: false,
+    timestamp: 1732550400000,
+    vinculado_rescisao: true,
+    fatura_mes: '2026-12',
+    fatura_vencimento: '2026-12-23',
+  },
 ];
 
 const getInitialExpenses = (): ExpenseRecord[] => {
@@ -293,16 +832,16 @@ export default function App() {
         parsed.custos_fixos_essenciais = 650.0;
         parsed.meta_poupanca_minima = 0.0;
         parsed.fatura_outubro_paga = true;
-        // A reserva de emergência É a própria rescisão (valor a ser descoberto na sexta, 30/10):
+        // A reserva de emergência É a própria rescisão oficial de R$ 2.796,91 homologada em 30/10:
         if (parsed.rescisao_prevista?.status === 'recebido' && (parsed.rescisao_prevista?.valor ?? 0) > 0) {
           parsed.reserva_emergencia = parsed.rescisao_prevista.valor;
         } else {
-          parsed.reserva_emergencia = 0.0;
+          parsed.reserva_emergencia = 2796.91;
           parsed.rescisao_prevista = {
             data_prevista: '2026-10-30',
-            valor: 0.0,
-            status: 'aguardando_calculo',
-            observacao: 'A reserva de emergência é a própria rescisão (valor a descobrir na sexta, 30/10)',
+            valor: 2796.91,
+            status: 'recebido',
+            observacao: 'Rescisão oficial homologada pelo usuário: R$ 2.796,91 recebidos em 30/10.',
           };
         }
         localStorage.setItem('sentinela_settings', JSON.stringify(parsed));
@@ -316,7 +855,28 @@ export default function App() {
 
   const [debts, setDebts] = useState<DebtRecord[]>(() => {
     const saved = localStorage.getItem('sentinela_debts');
-    return saved ? JSON.parse(saved) : DEFAULT_DEBTS;
+    if (saved) {
+      try {
+        const parsed: DebtRecord[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          let modified = false;
+          DEFAULT_DEBTS.forEach((def) => {
+            if (!parsed.some((d) => d.id === def.id || d.credor.toLowerCase().includes(def.credor.toLowerCase().split(' ')[0]))) {
+              parsed.push(def);
+              modified = true;
+            }
+          });
+          if (modified) {
+            localStorage.setItem('sentinela_debts', JSON.stringify(parsed));
+          }
+          return parsed;
+        }
+      } catch {
+        return DEFAULT_DEBTS;
+      }
+    }
+    localStorage.setItem('sentinela_debts', JSON.stringify(DEFAULT_DEBTS));
+    return DEFAULT_DEBTS;
   });
 
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
@@ -348,6 +908,9 @@ export default function App() {
             if (dt === '2026-10-21' && desc.toLowerCase().includes('uber') && Math.abs(val - 30.00) < 0.05) {
               dt = '2026-10-18';
               desc = 'Abbey';
+            }
+            if (dt === '2026-10-23' && (desc.toLowerCase().includes('lord') || desc.toLowerCase().includes('uber')) && Math.abs(val - 12.98) < 0.05) {
+              val = 12.38;
             }
 
             return {
@@ -504,14 +1067,21 @@ export default function App() {
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(expenses));
   }, [expenses]);
 
-  // Garante sincronização imediata no navegador caso o storage local anterior estivesse vazio ou faltando novos itens
+  // Garante sincronização imediata no navegador caso o storage local anterior estivesse vazio, desatualizado ou faltando novos itens
   useEffect(() => {
     setExpenses((current) => {
       let changed = false;
-      const updated = [...current];
+      const updated = current.map((e) => {
+        // Correção de Lord Uber 23/10: 12.98 -> 12.38
+        if (e.data === '2026-10-23' && (e.descricao.toLowerCase().includes('lord') || e.descricao.toLowerCase().includes('uber')) && Math.abs(e.valor - 12.98) < 0.05) {
+          changed = true;
+          return { ...e, valor: 12.38 };
+        }
+        return e;
+      });
       DEFAULT_INITIAL_EXPENSES.forEach((def) => {
         const exists = updated.some(
-          (e) => e.id === def.id || (e.data === def.data && Math.abs(e.valor - def.valor) < 0.01 && e.descricao.trim().toLowerCase() === def.descricao.trim().toLowerCase())
+          (e) => e.id === def.id || (e.data === def.data && Math.abs(e.valor - def.valor) < 0.01 && e.descricao.trim().toLowerCase().includes(def.descricao.trim().toLowerCase().split(' ')[0]))
         );
         if (!exists) {
           updated.push(def);
@@ -531,7 +1101,7 @@ export default function App() {
     sound.playSuccess();
     setExpenses(DEFAULT_INITIAL_EXPENSES);
     localStorage.setItem('sentinela_expenses_v2', JSON.stringify(DEFAULT_INITIAL_EXPENSES));
-    showToast('📥 [DESPESAS_CARREGADAS] 15 despesas de Outubro (R$ 661,45) sincronizadas com sucesso!');
+    showToast('📥 [DESPESAS_CARREGADAS] 58 lançamentos oficiais (Cartão 23/11 e Pix Rescisão) sincronizados com sucesso!');
   };
 
   const handleToggleVinculoRescisao = (id: string) => {
@@ -840,18 +1410,56 @@ export default function App() {
   };
 
   // Presets para conciliação das anotações do usuário vs sistema
-  const handleApplyPreset = (preset: 'atual_15_itens' | 'note_chopps' | 'note_8_only' | 'prev_standard' | 'note_2_ubers') => {
+  const handleApplyPreset = (preset: 'atual_26_itens' | 'atual_25_itens' | 'rescisao_total_1009' | 'rescisao_total_1003' | 'rescisao_total_939' | 'atual_22_itens' | 'atual_20_itens' | 'atual_19_itens' | 'atual_16_itens' | 'atual_15_itens' | 'note_chopps' | 'note_8_only' | 'prev_standard' | 'note_2_ubers') => {
     sound.playSuccess();
     let newItems: ExpenseRecord[] = [];
 
     // 10 itens com centavos exatos da nota (6,30 e 341,97) + Abbey 30,00 dia 18/10 + 2 Chopps (R$ 590,51)
     const base10WithChopps: ExpenseRecord[] = DEFAULT_INITIAL_EXPENSES.filter(
-      (e) => !['exp_uber22_558', 'exp_lord_uber23', 'exp_lord23', 'exp_uber24', 'exp_abbey24'].includes(e.id)
+      (e) => (e.metodo_pagamento === 'cartao_credito' || e.metodo_pagamento === 'cartao_proprio' || e.metodo_pagamento === 'cartao_mae') &&
+        !['exp_uber22_558', 'exp_lord_uber23', 'exp_lord23', 'exp_uber24', 'exp_abbey24', 'exp_mercado24_4346', 'exp_uber24_970', 'exp_abbey25_63', 'exp_uber25_697', 'exp_uber25_3525', 'exp_netflix_outubro', 'exp_perfume_parc1', 'exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_perfume_parc2', 'exp_netflix_novembro'].includes(e.id)
     );
 
-    if (preset === 'atual_15_itens') {
+    if (preset === 'atual_26_itens' || preset === 'atual_25_itens') {
       newItems = DEFAULT_INITIAL_EXPENSES;
-      showToast('✓ [TOTAL: R$ 661,45] 15 lançamentos oficiais consolidados (incluindo 22/10, 23/10 e 24/10)!');
+      showToast('✓ [TOTAL: R$ 959,14] 26 lançamentos consolidados para Fatura 23/11 (com Uber Pix no Cartão R$ 5,78 de 31/10)!');
+    } else if (preset === 'rescisao_total_1009' || preset === 'rescisao_total_1003') {
+      newItems = [
+        ...DEFAULT_INITIAL_EXPENSES.filter((e) => e.id !== 'exp_perfume_parc2'),
+        {
+          ...DEFAULT_INITIAL_EXPENSES.find((e) => e.id === 'exp_perfume_parc2')!,
+          data: '2026-10-31',
+          fatura_mes: '2026-11',
+          fatura_vencimento: '2026-11-23',
+        },
+      ];
+      showToast('✓ [TOTAL: R$ 1.009,14] Rescisão Total: Fatura 23/11 (R$ 959,14) + 2ª parcela do Perfume (R$ 50) quitadas juntas!');
+    } else if (preset === 'atual_22_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao'].includes(e.id));
+      showToast('✓ [TOTAL: R$ 889,23] 22 lançamentos da Fatura 23/11 (anteriores ao dia 29/10)!');
+    } else if (preset === 'rescisao_total_939') {
+      newItems = [
+        ...DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_perfume_parc2'].includes(e.id)),
+        {
+          ...DEFAULT_INITIAL_EXPENSES.find((e) => e.id === 'exp_perfume_parc2')!,
+          data: '2026-10-25',
+          fatura_mes: '2026-11',
+          fatura_vencimento: '2026-11-23',
+        },
+      ];
+      showToast('✓ [TOTAL: R$ 939,23] Rescisão Total (anterior a 29/10): com as 2 parcelas do Perfume quitadas!');
+    } else if (preset === 'atual_20_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_netflix_outubro', 'exp_perfume_parc1', 'exp_perfume_parc2', 'exp_netflix_novembro'].includes(e.id));
+      showToast('✓ [TOTAL: R$ 819,23] 20 lançamentos consolidados (anteriores à Netflix e Perfume)!');
+    } else if (preset === 'atual_19_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_uber25_3525', 'exp_netflix_outubro', 'exp_perfume_parc1', 'exp_perfume_parc2', 'exp_netflix_novembro'].includes(e.id));
+      showToast('✓ [TOTAL: R$ 783,98] 19 lançamentos consolidados (anteriores ao Uber R$ 35,25)!');
+    } else if (preset === 'atual_16_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_uber24_970', 'exp_abbey25_63', 'exp_uber25_697', 'exp_uber25_3525', 'exp_netflix_outubro', 'exp_perfume_parc1', 'exp_perfume_parc2', 'exp_netflix_novembro'].includes(e.id));
+      showToast('✓ [TOTAL: R$ 704,31] 16 lançamentos consolidados (com Uber Lord corrigido para R$ 12,38)!');
+    } else if (preset === 'atual_15_itens') {
+      newItems = DEFAULT_INITIAL_EXPENSES.filter((e) => !['exp_abbey29_44', 'exp_uber29_1243', 'exp_uber29_770', 'exp_uber31_578_cartao', 'exp_mercado24_4346', 'exp_uber24_970', 'exp_abbey25_63', 'exp_uber25_697', 'exp_uber25_3525', 'exp_netflix_outubro', 'exp_perfume_parc1', 'exp_perfume_parc2', 'exp_netflix_novembro'].includes(e.id));
+      showToast('✓ [TOTAL: R$ 660,85] 15 lançamentos consolidados (anteriores ao Mercado 24/10)!');
     } else if (preset === 'note_chopps') {
       newItems = base10WithChopps;
       showToast('✓ [TOTAL: R$ 590,51] 10 itens anteriores (Uber 6,30 e Denis 341,97) + 2 Chopps da Abbey.');
@@ -1071,7 +1679,7 @@ export default function App() {
                       </td>
                       <td className="py-2.5 px-3 text-neutral-300">
                         <span className="px-1.5 py-0.5 bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 text-[10px] font-bold">
-                          FATURA VENCE EM 23/11 ({cockpitReportData.count} COMPRAS)
+                          FATURA VENCE EM 23/11 (25 COMPRAS)
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-[#00f0ff] font-bold">
@@ -1191,22 +1799,142 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                     <button
                       type="button"
-                      onClick={() => handleApplyPreset('atual_15_itens')}
+                      onClick={() => handleApplyPreset('atual_26_itens')}
                       className={`p-2 border text-left cursor-pointer transition-all ${
-                        Math.abs(cockpitReportData.totalGeral - 661.45) < 0.05
+                        Math.abs(cockpitReportData.totalGeral - 959.14) < 0.05
+                          ? 'border-[#ffe600] bg-[#ffe600]/20 text-white shadow-md shadow-[#ffe600]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#ffe600]'
+                      }`}
+                      title="26 itens: fatura 23/11 consolidada com Abbey R$ 44, Uber R$ 12,43, Uber R$ 7,70 (29/10), Uber Pix no Cartão R$ 5,78 (31/10), Netflix e Perfume 1/2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#ffe600]">R$ 959,14</span>
+                        {Math.abs(cockpitReportData.totalGeral - 959.14) < 0.05 && (
+                          <span className="text-[10px] bg-[#ffe600] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        ⭐ 26 ITENS (FATURA 23/11 ATUALIZADA 31/10)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('rescisao_total_1009')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 1009.14) < 0.05
+                          ? 'border-[#bd00ff] bg-[#bd00ff]/20 text-white shadow-md shadow-[#bd00ff]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#bd00ff]'
+                      }`}
+                      title="27 itens: Fatura 23/11 (R$ 959,14) + 2ª parcela do Perfume (R$ 50) quitadas juntas pela Rescisão"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#c084fc]">R$ 1.009,14</span>
+                        {Math.abs(cockpitReportData.totalGeral - 1009.14) < 0.05 && (
+                          <span className="text-[10px] bg-[#bd00ff] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        🛡️ RESCISÃO TOTAL (2 PARCELAS = R$ 100)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_22_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 889.23) < 0.05
                           ? 'border-[#00ff66] bg-[#00ff66]/20 text-white shadow-md shadow-[#00ff66]/20'
                           : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00ff66]'
                       }`}
-                      title="15 itens: todos os lançamentos atualizados (incluindo 22/10, 23/10 e 24/10)"
+                      title="22 itens: anteriores aos lançamentos de 29/10"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 661,45</span>
-                        {Math.abs(cockpitReportData.totalGeral - 661.45) < 0.05 && (
+                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 889,23</span>
+                        {Math.abs(cockpitReportData.totalGeral - 889.23) < 0.05 && (
                           <span className="text-[10px] bg-[#00ff66] text-black px-1 font-black">ATIVO</span>
                         )}
                       </div>
                       <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
-                        ⭐ 15 ITENS (ATUALIZADO 24/10)
+                        📦 22 ITENS (ATÉ 25/10)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_20_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 819.23) < 0.05
+                          ? 'border-[#00ff66] bg-[#00ff66]/20 text-white shadow-md shadow-[#00ff66]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00ff66]'
+                      }`}
+                      title="20 itens: consolidação anterior a Netflix e Perfume"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 819,23</span>
+                        {Math.abs(cockpitReportData.totalGeral - 819.23) < 0.05 && (
+                          <span className="text-[10px] bg-[#00ff66] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        📦 20 ITENS (ANTERIOR)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_19_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 783.98) < 0.05
+                          ? 'border-[#00ff66] bg-[#00ff66]/20 text-white shadow-md shadow-[#00ff66]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00ff66]'
+                      }`}
+                      title="19 itens: anteriores ao Uber R$ 35,25 de 25/10"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00ff66]">R$ 783,98</span>
+                        {Math.abs(cockpitReportData.totalGeral - 783.98) < 0.05 && (
+                          <span className="text-[10px] bg-[#00ff66] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        📦 19 ITENS (ANTERIOR)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_16_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 704.31) < 0.05
+                          ? 'border-[#00f0ff] bg-[#00f0ff]/20 text-white shadow-md shadow-[#00f0ff]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00f0ff]'
+                      }`}
+                      title="16 itens: anteriores às compras de 25/10"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00f0ff]">R$ 704,31</span>
+                        {Math.abs(cockpitReportData.totalGeral - 704.31) < 0.05 && (
+                          <span className="text-[10px] bg-[#00f0ff] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        📦 16 ITENS (ATÉ MERCADO 24/10)
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPreset('atual_15_itens')}
+                      className={`p-2 border text-left cursor-pointer transition-all ${
+                        Math.abs(cockpitReportData.totalGeral - 660.85) < 0.05
+                          ? 'border-[#00f0ff] bg-[#00f0ff]/20 text-white shadow-md shadow-[#00f0ff]/20'
+                          : 'border-neutral-700 bg-black text-neutral-400 hover:text-white hover:border-[#00f0ff]'
+                      }`}
+                      title="15 itens: anteriores ao Mercado de 24/10"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-sm text-[#00f0ff]">R$ 660,85</span>
+                        {Math.abs(cockpitReportData.totalGeral - 660.85) < 0.05 && (
+                          <span className="text-[10px] bg-[#00f0ff] text-black px-1 font-black">ATIVO</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] block font-bold text-neutral-300 mt-0.5">
+                        📦 15 ITENS (ANTERIOR)
                       </span>
                     </button>
                     <button
@@ -1327,7 +2055,7 @@ export default function App() {
               {mobileReportExpanded && (
                 <div className="pt-3 border-t border-neutral-800 space-y-2 animate-in fade-in">
                   <div className="flex items-center justify-between text-xs text-neutral-300 font-bold px-1">
-                    <span className="uppercase text-[#00f0ff]">Lançamentos do Cartão (Ordem Cronológica 17/10 → 23/10):</span>
+                    <span className="uppercase text-[#00f0ff]">Lançamentos do Mês (Cartão 23/11 e Pix Rescisão):</span>
                     <span className="text-[#ffe600] font-black font-mono text-sm">Total: {formatCurrency(cockpitReportData.totalGeral, !showValues)}</span>
                   </div>
 

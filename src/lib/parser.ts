@@ -15,6 +15,7 @@ const ESSENTIAL_KEYWORDS = new Set([
 ]);
 
 const PAYMENT_METHOD_MAP: Array<{ pattern: RegExp; method: PaymentMethod }> = [
+  { pattern: /\b(pix\s*(?:no\s*)?cart[aã]o|cart[aã]o\s*pix)\b/i, method: 'cartao_credito' },
   { pattern: /\b(pix\s*[/]?\s*rescis[aã]o|rescis[aã]o\s*[/]?\s*pix|rescis[aã]o|verba\s*rescis[oó]ria)\b/i, method: 'pix_rescisao' },
   { pattern: /\b(cart[aã]o(?:\s*d[eé]\s*cr[eé]dito|\s*cr[eé]dito)?|cr[eé]dito|cart[aã]o\s*d?a?\s*m[aã]e|m[aã]e)\b/i, method: 'cartao_credito' },
   { pattern: /\b(pix\s*[/]?\s*sal[aá]rio|sal[aá]rio\s*[/]?\s*pix|sobra\s*(?:do\s*)?sal[aá]rio|saldo\s*livre|pix|px)\b/i, method: 'pix' },

@@ -44,7 +44,7 @@ export const SystemTransitionTracker: React.FC<SystemTransitionTrackerProps> = (
       e.metodo_pagamento === 'cartao_credito' ||
       e.metodo_pagamento === 'cartao_proprio' ||
       e.metodo_pagamento === 'cartao_mae';
-    return isCartao && (!e.fatura_mes || e.fatura_mes === '2026-11' || e.data >= '2026-10-17');
+    return isCartao && (e.fatura_mes ? e.fatura_mes === '2026-11' : (e.data >= '2026-10-17' && e.data <= '2026-11-17'));
   });
 
   const totalFaturaNovembro = cartaoNovExpenses.reduce((sum, e) => sum + e.valor, 0);

@@ -52,6 +52,76 @@ export const STEALTH_ALIAS_MAP: Array<{ match: (text: string) => boolean; alias:
     category: 'Mobilidade Urbana',
   },
   {
+    match: (t) => t.includes('mercado livre') || t.includes('mercadolivre'),
+    alias: 'E-Commerce & Encomendas #01',
+    category: 'Varejo Digital / Marketplace',
+  },
+  {
+    match: (t) => t.includes('telegram'),
+    alias: 'Comunicação & Mensageria Digital #01',
+    category: 'Assinatura Digital',
+  },
+  {
+    match: (t) => t.includes('tag') || t.includes('sem parar') || t.includes('conectcar') || t.includes('veloe'),
+    alias: 'Pedágio & Mobilidade / Tag Automotiva #01',
+    category: 'Transporte & Rodovias',
+  },
+  {
+    match: (t) => t.includes('mercado') || t.includes('supermercado') || t.includes('compras') || t.includes('hortifruti'),
+    alias: 'Gêneros Alimentícios & Provisões #01',
+    category: 'Alimentação Essencial / Mercado',
+  },
+  {
+    match: (t) => t.includes('farmacia') || t.includes('farmácia') || t.includes('drogaria') || t.includes('medicamento'),
+    alias: 'Farmácia & Cuidados de Saúde #01',
+    category: 'Saúde Essencial',
+  },
+  {
+    match: (t) => t.includes('barbearia') || t.includes('cabelo') || t.includes('corte'),
+    alias: 'Serviço Pessoal & Barbearia #01',
+    category: 'Cuidados Pessoais',
+  },
+  {
+    match: (t) => t.includes('banrisul') || t.includes('banco') || t.includes('tarifa'),
+    alias: 'Encargo Financeiro / Institucional #01',
+    category: 'Serviços Bancários',
+  },
+  {
+    match: (t) => t.includes('trem') || t.includes('metro') || t.includes('passagem') || t.includes('onibus') || t.includes('ônibus'),
+    alias: 'Transporte Ferroviário / Coletivo #01',
+    category: 'Mobilidade Urbana',
+  },
+  {
+    match: (t) => t.includes('cafe') || t.includes('café') || t.includes('lanche'),
+    alias: 'Conveniência & Café #01',
+    category: 'Alimentação & Pausa',
+  },
+  {
+    match: (t) => t.includes('flor') || t.includes('flores') || t.includes('floricultura'),
+    alias: 'Artigos Decorativos & Floral #01',
+    category: 'Decoração & Gentileza',
+  },
+  {
+    match: (t) => t.includes('banca') || t.includes('jornal') || t.includes('revista'),
+    alias: 'Banca & Impressos #01',
+    category: 'Conveniência',
+  },
+  {
+    match: (t) => t.includes('chave') || t.includes('chaveiro'),
+    alias: 'Serviço de Chaveiro & Manutenção #01',
+    category: 'Manutenção Pessoal',
+  },
+  {
+    match: (t) => t.includes('netflix') || t.includes('streaming'),
+    alias: 'Serviço Digital / Streaming #01',
+    category: 'Assinatura Digital',
+  },
+  {
+    match: (t) => t.includes('perfume') || t.includes('fragrancia') || t.includes('cosmetico'),
+    alias: 'Perfumaria & Cuidados Pessoais #01',
+    category: 'Varejo / Bem-Estar',
+  },
+  {
     match: (t) => t.includes('anderson'),
     alias: 'Operador [SENTINELA]',
     category: 'Identidade Operacional',
